@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Devanagari:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="./adalat-cases.js"></script>
+<script src="./adalat-ai.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./adalat-net.js"></script>
+<style>
+html,body{margin:0;padding:0;background:#F4F2FF}
+*{box-sizing:border-box}
+a{color:#6D28D9}a:hover{color:#DB2777}
+textarea,input{font:inherit}
+textarea:focus,input:focus{outline:none;border-color:#6D28D9}
+@keyframes adlPulse{0%,100%{opacity:.25}50%{opacity:1}}
+</style>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#6D28D9"/><text x="50" y="64" text-anchor="middle" font-family="Georgia,serif" font-size="44" font-weight="700" fill="#FFFFFF">A</text></svg></template>
+</helmet>
+<div style="min-height:100dvh;background:#F4F2FF;color:#1E1B4B;font-family:'IBM Plex Sans','IBM Plex Sans Devanagari',sans-serif">
+
+<div style="position:sticky;top:0;z-index:10;background:#FFFFFF;border-bottom:1px solid #E4DEFF">
+  <div style="max-width:1080px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 20px;min-height:60px">
+    <button onClick="{{ goHome }}" style="display:flex;align-items:baseline;gap:14px;min-width:0;background:transparent;border:0;color:#1E1B4B;font:inherit;cursor:pointer;padding:0">
+      <span style="font-family:'Spectral',serif;font-weight:700;font-size:20px;letter-spacing:0.22em">ADALAT</span>
+      <span style="font-size:13px;color:#5B5B8A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ headerSub }}</span>
+    </button>
+    <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+      <button onClick="{{ toggleVoice }}" style="min-height:32px;padding:0 12px;border-radius:999px;border:1px solid #6D28D9;background:{{ voiceBg }};color:{{ voiceFg }};font:inherit;font-size:13px;cursor:pointer">{{ voiceLabel }}</button>
+      <button onClick="{{ setEn }}" style="min-height:32px;min-width:40px;padding:0 10px;border-radius:999px;border:1px solid #6D28D9;font:inherit;font-size:13px;cursor:pointer;background:{{ enBg }};color:{{ enFg }}">EN</button>
+      <button onClick="{{ setHi }}" style="min-height:32px;min-width:40px;padding:0 10px;border-radius:999px;border:1px solid #6D28D9;font:inherit;font-size:13px;cursor:pointer;background:{{ hiBg }};color:{{ hiFg }}">हिं</button>
+    </div>
+  </div>
+</div>
+
+<sc-if value="{{ hostGone }}">
+  <div style="position:sticky;top:60px;z-index:9;background:#6D28D9;color:#FFFFFF;padding:10px 20px;text-align:center;font-size:14px">{{ hostGoneText }}</div>
+</sc-if>
+
+<sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:80px 20px;text-align:center;color:#5B5B8A">Loading case files…</div>
+</sc-if>
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="max-width:880px;margin:0 auto;padding:24px 20px 140px;min-height:calc(100dvh - 61px);display:flex;flex-direction:column;gap:24px">
+  <sc-if value="{{ guestBanner }}">
+    <div style="padding:14px 18px;border-radius:16px;background:#6D28D9;color:#FFFFFF;font-size:15px;line-height:1.5">{{ guestBannerText }}</div>
+  </sc-if>
+
+  <sc-if value="{{ isTitle }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;text-align:center;padding:32px 0">
+      <span style="width:96px;height:96px;border-radius:28px;background:#FACC15;display:flex;align-items:center;justify-content:center;font-size:52px;line-height:1;box-shadow:0 10px 0 #6D28D9">⚖</span>
+      <span style="font-family:'Spectral',serif;font-size:clamp(52px,11vw,96px);font-weight:700;letter-spacing:0.16em;line-height:1;padding-left:0.16em;color:#6D28D9">ADALAT</span>
+      <span style="font-size:17px;color:#3F3D6B;max-width:460px;line-height:1.55;text-wrap:pretty">{{ t.heroTitle }}</span>
+      <div style="display:flex;gap:12px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 20px;border-radius:16px;background:#DCFCE7;min-width:112px"><span style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:#15803D">{{ statPassed }}</span><span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#5B5B8A">{{ gt.cleared }}</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 20px;border-radius:16px;background:#FEF9C3;min-width:112px"><span style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:#6D28D9">★ {{ statStars }}</span><span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#5B5B8A">{{ gt.stars }}</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;width:min(380px,100%);padding-top:6px">
+        <button onClick="{{ toLevels }}" style="min-height:62px;border-radius:999px;border:2px solid #FACC15;background:#FACC15;color:#1E1B4B;font:inherit;font-size:18px;font-weight:700;letter-spacing:0.06em;cursor:pointer;box-shadow:0 6px 0 #EAB308;transition:transform .1s" style-active="transform:scale(0.97)">▶  {{ gt.play }}</button>
+        <button onClick="{{ toFriends }}" style="min-height:56px;border-radius:999px;border:2px solid #DB2777;background:#DB2777;color:#FFFFFF;font:inherit;font-size:16px;font-weight:600;cursor:pointer;transition:transform .1s" style-active="transform:scale(0.97)">{{ gt.friends }}</button>
+        <button onClick="{{ toAi }}" style="min-height:56px;border-radius:999px;border:2px solid #0D9488;background:#0D9488;color:#FFFFFF;font:inherit;font-size:16px;font-weight:600;cursor:pointer;transition:transform .1s" style-active="transform:scale(0.97)">{{ gt.ai }}</button>
+      </div>
+      <span style="font-size:13px;color:#5B5B8A;max-width:420px;line-height:1.5">{{ gt.titleNote }}</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isLevels }}">
+    <div style="display:flex;align-items:center;gap:14px">
+      <button onClick="{{ toTitle }}" style="width:44px;height:44px;border-radius:50%;border:2px solid #6D28D9;background:#FFFFFF;font:inherit;font-size:18px;cursor:pointer">←</button>
+      <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:30px;font-weight:700">{{ t.chooseLevel }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;padding:12px 0">
+      <sc-for list="{{ levelCards }}" as="lv" hint-placeholder-count="3">
+        <div style="display:grid;grid-template-columns:84px minmax(0,1fr);column-gap:20px">
+          <div style="display:flex;flex-direction:column;align-items:center">
+            <button onClick="{{ lv.go }}" style="width:76px;height:76px;flex-shrink:0;border-radius:50%;border:3px solid {{ lv.nodeBd }};background:{{ lv.nodeBg }};color:{{ lv.nodeFg }};font-family:'Spectral',serif;font-size:30px;font-weight:700;cursor:pointer;transition:transform .1s" style-active="transform:scale(0.94)">{{ lv.nodeTxt }}</button>
+            <sc-if value="{{ lv.notLast }}"><div style="width:3px;flex:1;min-height:40px;background-image:linear-gradient(#6D28D9 50%,transparent 50%);background-size:3px 10px"></div></sc-if>
+          </div>
+          <button onClick="{{ lv.go }}" style="text-align:left;display:flex;flex-direction:column;gap:6px;padding:8px 0 36px;border:0;background:transparent;font:inherit;color:#1E1B4B;cursor:pointer;opacity:{{ lv.op }}">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;font-weight:700">{{ lv.tag }}</span>
+              <span style="font-size:16px;letter-spacing:0.12em">{{ lv.stars }}</span>
+              <span style="font-size:12px;padding:3px 10px;border-radius:999px;background:#EDE9FE;color:#3F3D6B">{{ lv.status }}</span>
+            </div>
+            <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:24px;font-weight:700">{{ lv.name }}</span>
+            <span style="font-size:14px;color:#3F3D6B;line-height:1.5">{{ lv.learn }}</span>
+            <span style="font-size:13px;color:#5B5B8A">{{ lv.type }} · {{ lv.rules }}</span>
+          </button>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isRoles }}">
+    <div style="display:flex;align-items:center;gap:14px">
+      <button onClick="{{ rolesBack }}" style="width:44px;height:44px;border-radius:50%;border:2px solid #6D28D9;background:#FFFFFF;font:inherit;font-size:18px;cursor:pointer">←</button>
+      <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:30px;font-weight:700">{{ gt.whoPlay }}</span>
+    </div>
+    <span style="font-size:14px;color:#3F3D6B">{{ rolesSub }}</span>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px">
+      <sc-for list="{{ roleCards }}" as="r" hint-placeholder-count="5">
+        <button onClick="{{ r.pick }}" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 14px 18px;border-radius:24px;border:2px solid {{ r.bd }};background:#FFFFFF;cursor:pointer;font:inherit;color:#1E1B4B;text-align:center;opacity:{{ r.op }};transition:transform .1s" style-active="transform:scale(0.97)">
+          <span style="width:68px;height:68px;border-radius:50%;border:2px solid #6D28D9;display:flex;align-items:center;justify-content:center;font-family:'Spectral',serif;font-size:28px;font-weight:700;background:{{ r.fill }};color:{{ r.ink }}">{{ r.ini }}</span>
+          <span style="font-weight:700;font-size:16px">{{ r.name }}</span>
+          <span style="font-size:12px;line-height:1.45;color:#3F3D6B">{{ r.desc }}</span>
+          <span style="font-size:11px;font-weight:700">{{ r.takenBy }}</span>
+        </button>
+      </sc-for>
+    </div>
+    <sc-if value="{{ genError }}"><span style="font-size:14px;font-weight:600">✕ {{ aiErr }}</span></sc-if>
+    <div style="position:fixed;left:0;right:0;bottom:0;z-index:8;background:#FFFFFF;border-top:1px solid #E4DEFF;padding:14px 20px">
+      <div style="max-width:880px;margin:0 auto;display:flex;gap:12px;align-items:center">
+        <span style="flex:1;font-size:14px;color:#3F3D6B;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ roleSummary }}</span>
+        <button onClick="{{ roleGo }}" style="min-height:56px;padding:0 32px;border-radius:999px;border:0;background:#6D28D9;color:#FFFFFF;font:inherit;font-size:16px;font-weight:600;cursor:pointer;transition:transform .1s" style-active="transform:scale(0.97)">{{ roleCta }}  →</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isFriends }}">
+    <div style="display:flex;align-items:center;gap:14px">
+      <button onClick="{{ toTitle }}" style="width:44px;height:44px;border-radius:50%;border:2px solid #6D28D9;background:#FFFFFF;font:inherit;font-size:18px;cursor:pointer">←</button>
+      <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:30px;font-weight:700">{{ gt.friends }}</span>
+      <span style="margin-left:auto;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;padding:5px 12px;border-radius:999px;background:#EDE9FE">● {{ netBadge }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;padding:22px;border-radius:24px;background:#EDE9FE">
+      <sc-if value="{{ needConfig }}">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <span style="font-size:13px;color:#3F3D6B;line-height:1.5">{{ nt.setup }}</span>
+          <input value="{{ sbUrl }}" onChange="{{ onSbUrl }}" placeholder="https://xxxx.supabase.co" style="min-height:48px;padding:0 16px;border-radius:14px;border:2px solid #C9BFFF;background:#FFFFFF;font-size:15px;color:#1E1B4B">
+          <input value="{{ sbKey }}" onChange="{{ onSbKey }}" placeholder="anon public key" style="min-height:48px;padding:0 16px;border-radius:14px;border:2px solid #C9BFFF;background:#FFFFFF;font-size:15px;color:#1E1B4B">
+          <button onClick="{{ saveSb }}" style="align-self:flex-start;min-height:46px;padding:0 22px;border-radius:999px;border:0;background:#6D28D9;color:#FFFFFF;font:inherit;cursor:pointer">{{ nt.save }}</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ showConnect }}">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#5B5B8A">{{ nt.name }}<input value="{{ myName }}" onChange="{{ onName }}" style="min-height:52px;padding:0 16px;border-radius:14px;border:2px solid #C9BFFF;background:#FFFFFF;font-size:17px;color:#1E1B4B;letter-spacing:0;text-transform:none"></label>
+          <button onClick="{{ createRoom }}" style="min-height:56px;border-radius:999px;border:0;background:#6D28D9;color:#FFFFFF;font:inherit;font-size:16px;font-weight:600;cursor:pointer;transition:transform .1s" style-active="transform:scale(0.98)">{{ nt.create }}</button>
+          <div style="display:flex;align-items:center;gap:10px;color:#A5A3C9;font-size:12px"><span style="flex:1;height:1px;background:#C9BFFF"></span>{{ gt.or }}<span style="flex:1;height:1px;background:#C9BFFF"></span></div>
+          <div style="display:flex;gap:10px">
+            <input value="{{ joinCode }}" onChange="{{ onJoinCode }}" placeholder="{{ nt.codePh }}" style="flex:1;min-width:0;min-height:52px;padding:0 16px;border-radius:14px;border:2px solid #C9BFFF;background:#FFFFFF;font-size:16px;color:#1E1B4B;letter-spacing:0.08em">
+            <button onClick="{{ joinRoom }}" style="min-height:52px;padding:0 24px;border-radius:999px;border:2px solid #6D28D9;background:#FFFFFF;color:#1E1B4B;font:inherit;font-weight:600;cursor:pointer">{{ nt.join }}</button>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ inRoom }}">
+        <div style="display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center">
+          <span style="font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:#5B5B8A">{{ nt.room }}</span>
+          <span style="font-family:'Spectral',serif;font-size:44px;font-weight:700;letter-spacing:0.16em;line-height:1">{{ roomCode }}</span>
+          <span style="font-size:13px;color:#3F3D6B;line-height:1.5;max-width:420px">{{ nt.help }}</span>
+          <button onClick="{{ share }}" style="min-height:46px;padding:0 22px;border-radius:999px;border:2px solid #6D28D9;background:#FFFFFF;color:#1E1B4B;font:inherit;font-weight:600;cursor:pointer">{{ shareLabel }}</button>
+          <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding-top:6px">
+            <sc-for list="{{ peerList }}" as="pl" hint-placeholder-count="2">
+              <span style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:#FFFFFF;font-size:14px"><span style="font-weight:700">{{ pl.name }}</span><span style="color:#3F3D6B">{{ pl.role }}</span><span style="font-size:10px;letter-spacing:0.1em">{{ pl.tag }}</span></span>
+            </sc-for>
+          </div>
+          <button onClick="{{ leaveRoom }}" style="background:transparent;border:0;padding:4px 0;color:#5B5B8A;font:inherit;font-size:13px;text-decoration:underline;cursor:pointer">{{ nt.leave }}</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasNetErr }}"><span style="font-size:13px;font-weight:600;line-height:1.5">✕ {{ netErr }}</span></sc-if>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:#5B5B8A;padding-bottom:6px">{{ t.otherSeats }}</span>
+      <sc-for list="{{ seatRows }}" as="s" hint-placeholder-count="4">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0">
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-weight:600;font-size:15px">{{ s.name }}</span><span style="font-size:12px;color:#5B5B8A">{{ s.status }}</span></div>
+          <div style="display:flex;flex-shrink:0;padding:4px;border-radius:999px;background:#EDE9FE">
+            <button onClick="{{ s.setHuman }}" style="border:0;border-radius:999px;min-height:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer;background:{{ s.hBg }};color:{{ s.hFg }}">{{ t.human }}</button>
+            <button onClick="{{ s.setAi }}" style="border:0;border-radius:999px;min-height:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer;background:{{ s.aBg }};color:{{ s.aFg }}">AI</button>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="position:fixed;left:0;right:0;bottom:0;z-index:8;background:#FFFFFF;border-top:1px solid #E4DEFF;padding:14px 20px">
+      <div style="max-width:880px;margin:0 auto;display:flex;justify-content:flex-end">
+        <button onClick="{{ friendsGo }}" style="min-height:56px;padding:0 32px;border-radius:999px;border:0;background:#6D28D9;color:#FFFFFF;font:inherit;font-size:16px;font-weight:600;cursor:pointer">{{ friendsCta }}  →</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isAiMenu }}">
+    <div style="display:flex;align-items:center;gap:14px">
+      <button onClick="{{ toTitle }}" style="width:44px;height:44px;border-radius:50%;border:2px solid #6D28D9;background:#FFFFFF;font:inherit;font-size:18px;cursor:pointer">←</button>
+      <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:30px;font-weight:700">{{ t.aiTitle }}</span>
+    </div>
+    <span style="font-size:15px;line-height:1.6;color:#3F3D6B">{{ t.aiSub }}</span>
+    <span style="font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:#5B5B8A">{{ gt.pickType }}</span>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
+      <sc-for list="{{ aiTypes }}" as="at" hint-placeholder-count="8">
+        <button onClick="{{ at.pick }}" style="min-height:72px;padding:0 16px;border-radius:20px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;border:2px solid {{ at.bd }};background:{{ at.bg }};color:{{ at.fg }};transition:transform .1s" style-active="transform:scale(0.97)">{{ at.name }}</button>
+      </sc-for>
+    </div>
+    <span style="font-size:13px;color:#5B5B8A">{{ genNote }}</span>
+    <div style="position:fixed;left:0;right:0;bottom:0;z-index:8;background:#FFFFFF;border-top:1px solid #E4DEFF;padding:14px 20px">
+      <div style="max-width:880px;margin:0 auto;display:flex;justify-content:flex-end">
+        <button onClick="{{ toRolesAi }}" style="min-height:56px;padding:0 32px;border-radius:999px;border:0;background:#6D28D9;color:#FFFFFF;font:inherit;font-size:16px;font-weight:600;cursor:pointer">{{ gt.nextRole }}  →</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isBrief }}" hint-placeholder-val="{{ false }}">
+<div style="max-width:1080px;margin:0 auto;padding:48px 20px 80px;display:flex;flex-direction:column;gap:48px">
+  <div style="display:flex;flex-direction:column;gap:10px;padding-bottom:28px;border-bottom:1px solid #6D28D9">
+    <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#5B5B8A">{{ t.caseFile }} · {{ C.caseNo }}</span>
+    <span style="font-family:'Spectral',serif;font-size:clamp(30px,4.4vw,44px);font-weight:600;line-height:1.12">{{ C.title }}</span>
+    <span style="font-size:14px;color:#5B5B8A">{{ C.court }}</span>
+    <span style="font-size:18px;line-height:1.55;color:#1E1B4B;max-width:760px;padding-top:6px">{{ C.oneLine }}</span>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+    <div style="flex:1 1 520px;min-width:0;display:flex;flex-direction:column;gap:44px">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#5B5B8A">{{ t.story }}</span>
+        <sc-if value="{{ showEnNote }}"><span style="font-size:13px;color:#5B5B8A">{{ t.enContent }}</span></sc-if>
+        <sc-for list="{{ C.story }}" as="para" hint-placeholder-count="6">
+          <p style="margin:0;font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:18px;line-height:1.7;text-wrap:pretty">{{ para }}</p>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#5B5B8A;padding-bottom:8px">{{ t.timeline }}</span>
+        <sc-for list="{{ timeline }}" as="tl" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:140px minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid #E4DEFF;align-items:baseline">
+            <span style="font-size:13px;font-weight:600">{{ tl.when }}</span>
+            <span style="font-size:15px;line-height:1.5">{{ tl.what }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#5B5B8A;padding-bottom:8px">{{ t.people }}</span>
+        <sc-for list="{{ people }}" as="pp" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid #E4DEFF">
+            <span style="font-weight:600;font-size:15px">{{ pp.name }}</span>
+            <span style="font-size:14px;color:#3F3D6B">{{ pp.role }}<span style="color:#5B5B8A"> {{ pp.note }}</span></span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#5B5B8A;padding-bottom:4px">{{ t.exhibits }}</span>
+        <span style="font-size:13px;color:#5B5B8A;padding-bottom:8px">{{ t.tapExhibit }}</span>
+        <sc-for list="{{ exhibitList }}" as="x" hint-placeholder-count="5">
+          <button onClick="{{ x.open }}" style="text-align:left;display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:16px;padding:14px 0;border:0;border-bottom:1px solid #E4DEFF;background:transparent;font:inherit;color:#1E1B4B;cursor:pointer;align-items:baseline">
+            <span style="font-weight:600;font-size:14px;letter-spacing:0.04em">{{ x.id }}</span>
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:15px">{{ x.name }}</span><span style="font-size:13px;color:#3F3D6B">{{ x.plain }}</span></span>
+            <span style="font-size:13px">→</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:44px">
+      <div style="display:flex;flex-direction:column;gap:10px;padding:22px;background:#6D28D9;color:#FFFFFF">
+        <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#A5A3C9">{{ t.yourRole }}</span>
+        <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:24px;font-weight:600">{{ myRoleName }}</span>
+        <span style="font-size:15px;line-height:1.6">{{ myGoal }}</span>
+        <span style="font-size:13px;line-height:1.55;color:#A5A3C9;padding-top:6px">{{ t.winRule }}</span>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#5B5B8A;padding-bottom:4px">{{ t.lawSimple }}</span>
+        <sc-for list="{{ C.laws }}" as="l" hint-placeholder-count="5">
+          <div style="display:flex;flex-direction:column;gap:6px;padding:16px 0;border-bottom:1px solid #E4DEFF">
+            <span style="font-size:13px;font-weight:600;letter-spacing:0.04em">{{ l.sec }}</span>
+            <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:19px;font-weight:600">{{ l.title }}</span>
+            <span style="font-size:14px;line-height:1.55">{{ l.plain }}</span>
+            <span style="font-size:13px;color:#3F3D6B"><span style="font-weight:600;color:#1E1B4B">{{ t.punish }}.</span> {{ l.punish }}</span>
+            <span style="font-size:13px;color:#3F3D6B"><span style="font-weight:600;color:#1E1B4B">{{ t.inThisCase }}.</span> {{ l.here }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#5B5B8A">{{ t.words }}</span>
+        <sc-for list="{{ gloss }}" as="g" hint-placeholder-count="6">
+          <div style="font-size:14px;line-height:1.5"><span style="font-weight:600">{{ g.w }}</span> <span style="color:#3F3D6B">— {{ g.d }}</span></div>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <button onClick="{{ goHome }}" style="min-height:52px;padding:0 4px;border:0;background:transparent;color:#1E1B4B;font:inherit;text-decoration:underline;cursor:pointer">← {{ t.back }}</button>
+        <button onClick="{{ startCase }}" style="flex:1;min-height:52px;border-radius:999px;border:0;background:#6D28D9;color:#FFFFFF;font:inherit;font-size:16px;font-weight:500;cursor:pointer">{{ enterLabel }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCourt }}" hint-placeholder-val="{{ false }}">
+<div style="max-width:1120px;margin:0 auto;padding:16px 20px 48px;display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+  <div style="flex:1 1 580px;min-width:0;display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="padding:6px 14px;border-radius:999px;background:#6D28D9;color:#FFFFFF;font-size:12px;font-weight:700;letter-spacing:0.12em">{{ hudLevel }}</span>
+      <div style="flex:1;min-width:140px;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;gap:4px">
+          <sc-for list="{{ hudSegs }}" as="sg" hint-placeholder-count="6"><div style="flex:1;height:8px;border-radius:4px;transition:background .3s;background:{{ sg.bg }}"></div></sc-for>
+        </div>
+        <span style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#3F3D6B">{{ hudPhase }}</span>
+      </div>
+      <span style="padding:6px 14px;border-radius:999px;border:2px solid #6D28D9;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums">★ {{ hudScore }}</span>
+    </div>
+
+    <div style="border-radius:28px;background:#EDE9FE;padding:22px 16px 20px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;color:#FFFFFF;background:#6D28D9;border-radius:999px;padding:2px 8px;opacity:{{ stage.judge.bOp }}">{{ t.speakingNow }}</span>
+        <div style="width:60px;height:60px;border-radius:50%;border:2.5px solid #6D28D9;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;transition:all .25s;background:{{ stage.judge.bg }};color:{{ stage.judge.fg }};transform:{{ stage.judge.tf }}">{{ stage.judge.ini }}</div>
+        <div style="width:min(380px,100%);height:14px;border-radius:7px;background:#6D28D9"></div>
+        <span style="font-size:12px;font-weight:600;text-align:center">{{ stage.judge.name }}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+          <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;color:#FFFFFF;background:#6D28D9;border-radius:999px;padding:2px 8px;opacity:{{ stage.pros.bOp }}">{{ t.speakingNow }}</span>
+          <div style="width:50px;height:50px;border-radius:50%;border:2.5px solid #6D28D9;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;transition:all .25s;background:{{ stage.pros.bg }};color:{{ stage.pros.fg }};transform:{{ stage.pros.tf }}">{{ stage.pros.ini }}</div>
+          <span style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#5B5B8A;text-align:center">{{ t.prosTable }}</span>
+          <span style="font-size:11px;font-weight:600;text-align:center;line-height:1.3">{{ stage.pros.name }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+          <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;color:#FFFFFF;background:#6D28D9;border-radius:999px;padding:2px 8px;opacity:{{ stage.witness.bOp }}">{{ t.speakingNow }}</span>
+          <div style="width:50px;height:50px;border-radius:50%;border:2.5px solid #6D28D9;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;transition:all .25s;background:{{ stage.witness.bg }};color:{{ stage.witness.fg }};transform:{{ stage.witness.tf }}">{{ stage.witness.ini }}</div>
+          <span style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#5B5B8A;text-align:center">{{ t.witnessBox }}</span>
+          <span style="font-size:11px;font-weight:600;text-align:center;line-height:1.3">{{ stage.witness.name }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+          <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;color:#FFFFFF;background:#6D28D9;border-radius:999px;padding:2px 8px;opacity:{{ stage.accused.bOp }}">{{ t.speakingNow }}</span>
+          <div style="width:50px;height:50px;border-radius:50%;border:2.5px solid #6D28D9;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;transition:all .25s;background:{{ stage.accused.bg }};color:{{ stage.accused.fg }};transform:{{ stage.accused.tf }}">{{ stage.accused.ini }}</div>
+          <span style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#5B5B8A;text-align:center">{{ t.dock }}</span>
+          <span style="font-size:11px;font-weight:600;text-align:center;line-height:1.3">{{ stage.accused.name }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+          <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;color:#FFFFFF;background:#6D28D9;border-radius:999px;padding:2px 8px;opacity:{{ stage.def.bOp }}">{{ t.speakingNow }}</span>
+          <div style="width:50px;height:50px;border-radius:50%;border:2.5px solid #6D28D9;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;transition:all .25s;background:{{ stage.def.bg }};color:{{ stage.def.fg }};transform:{{ stage.def.tf }}">{{ stage.def.ini }}</div>
+          <span style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#5B5B8A;text-align:center">{{ t.defTable }}</span>
+          <span style="font-size:11px;font-weight:600;text-align:center;line-height:1.3">{{ stage.def.name }}</span>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ showExplainer }}">
+      <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start;padding:14px 16px;border-radius:18px;border:2px dashed #A5A3C9">
+        <span style="padding:3px 10px;border-radius:999px;background:#6D28D9;color:#FFFFFF;font-size:11px;font-weight:700;letter-spacing:0.1em">TIP</span>
+        <span style="font-size:14px;line-height:1.55"><span style="font-weight:700">{{ stepTitle }}.</span> {{ stepText }}</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showThinking }}">
+      <div style="position:relative;margin-top:12px;padding:26px 20px 20px;border-radius:22px;border:2.5px solid #6D28D9;display:flex;align-items:center;gap:12px;color:#3F3D6B;font-size:15px">
+        <span style="width:9px;height:9px;border-radius:50%;background:#6D28D9;animation:adlPulse 1s infinite"></span>{{ thinkingLabel }}
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showAiError }}">
+      <div style="display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:22px;border:2.5px solid #6D28D9">
+        <span style="font-size:15px;line-height:1.5;font-weight:600">✕ {{ aiErr }}</span>
+        <button onClick="{{ retry }}" style="align-self:flex-start;min-height:46px;padding:0 22px;border-radius:999px;border:0;background:#6D28D9;color:#FFFFFF;font:inherit;cursor:pointer">{{ t.retry }}</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showStatement }}">
+      <div style="position:relative;margin-top:14px;padding:30px 22px 20px;border-radius:22px;border:2.5px solid #6D28D9;display:flex;flex-direction:column;gap:16px;background:#FFFFFF">
+        <span style="position:absolute;top:-15px;left:18px;padding:5px 14px;border-radius:999px;background:#6D28D9;color:#FFFFFF;font-size:12px;font-weight:600;max-width:calc(100% - 120px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cur.tag }} · {{ cur.who }}</span>
+        <button onClick="{{ replaySpeech }}" style="position:absolute;top:-15px;right:18px;height:30px;padding:0 12px;border-radius:999px;border:2px solid #6D28D9;background:#FFFFFF;font:inherit;font-size:12px;cursor:pointer">♪ {{ t.listen }}</button>
+        <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:clamp(19px,2.4vw,24px);line-height:1.5;font-weight:500;text-wrap:pretty">{{ cur.text }}</span>
+        <sc-if value="{{ showFeedback }}">
+          <div style="display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;align-items:start;padding:16px;border-radius:18px;background:#EDE9FE">
+            <span style="width:52px;height:52px;border-radius:50%;background:#6D28D9;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">{{ fb.icon }}</span>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:16px;font-weight:700">{{ fb.label }}</span><span style="padding:2px 10px;border-radius:999px;border:2px solid #6D28D9;font-size:12px;font-weight:700">{{ fb.pts }}</span></div>
+              <span style="font-size:14px;line-height:1.55">{{ fb.why }}</span>
+              <sc-if value="{{ fb.hasBetter }}"><span style="font-size:14px;line-height:1.55;color:#1E1B4B"><span style="font-weight:700;color:#1E1B4B">{{ t.better }}:</span> {{ fb.better }}</span></sc-if>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showLaterNote }}"><span style="font-size:13px;color:#5B5B8A">{{ t.laterNote }}</span></sc-if>
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:16px;flex-wrap:wrap">
+          <sc-if value="{{ showForceNext }}"><button onClick="{{ forceNext }}" style="background:transparent;border:0;padding:0;color:#5B5B8A;font:inherit;font-size:13px;text-decoration:underline;cursor:pointer">{{ nt.forceNext }}</button></sc-if>
+          <button onClick="{{ next }}" style="min-height:52px;padding:0 28px;border-radius:999px;border:0;background:#6D28D9;color:#FFFFFF;font:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:transform .1s" style-active="transform:scale(0.97)">{{ nextLabel }}  →</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showHandoff }}">
+      <div style="position:relative;margin-top:14px;padding:30px 22px 20px;border-radius:22px;border:2.5px dashed #6D28D9;display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+        <span style="position:absolute;top:-15px;left:18px;padding:5px 14px;border-radius:999px;background:#FFFFFF;border:2px solid #6D28D9;font-size:12px;font-weight:600">{{ handoffTitle }}</span>
+        <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:24px;font-weight:700">{{ handoffName }}</span>
+        <span style="font-size:14px;color:#3F3D6B;line-height:1.55">{{ handoffHelp }}</span>
+        <sc-if value="{{ canTakeOver }}"><button onClick="{{ takeOver }}" style="min-height:46px;padding:0 22px;border-radius:999px;border:2px solid #6D28D9;background:#FFFFFF;color:#1E1B4B;font:inherit;font-weight:600;cursor:pointer">{{ t.takeOver }}</button></sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showAction }}">
+      <div style="display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:24px;border:2.5px solid #6D28D9;background:#FFFFFF;box-shadow:0 10px 30px rgba(0,0,0,0.08)">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="padding:5px 14px;border-radius:999px;background:#6D28D9;color:#FFFFFF;font-size:12px;font-weight:700;letter-spacing:0.06em">{{ actorLabel }}</span>
+          <span style="padding:5px 12px;border-radius:999px;background:#EDE9FE;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">⏱ {{ timeLabel }}</span>
+        </div>
+        <sc-if value="{{ hasTimer }}"><div style="height:6px;border-radius:3px;background:#E4DEFF;overflow:hidden"><div style="height:100%;border-radius:3px;background:#6D28D9;width:{{ timerPct }}"></div></div></sc-if>
+        <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:clamp(20px,2.5vw,24px);font-weight:700;line-height:1.35;text-wrap:pretty">{{ turnPrompt }}</span>
+        <sc-if value="{{ showOptions }}">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-if value="{{ optionsAreSuggestions }}"><span style="font-size:13px;color:#5B5B8A">{{ t.sugHelp }}</span></sc-if>
+            <sc-for list="{{ optionView }}" as="o" hint-placeholder-count="3">
+              <button onClick="{{ o.pick }}" style="text-align:left;display:grid;grid-template-columns:36px minmax(0,1fr);gap:14px;align-items:center;min-height:62px;padding:12px 16px 12px 12px;border-radius:18px;border:2px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font:inherit;font-size:15px;line-height:1.5;cursor:pointer;opacity:{{ o.op }};text-decoration:{{ o.td }};transition:transform .1s" style-active="transform:scale(0.985)">
+                <span style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;background:{{ o.keyBg }};color:{{ o.keyFg }}">{{ o.key }}</span>
+                <span>{{ o.t }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ freeMode }}">
+          <textarea value="{{ freeText }}" onChange="{{ onFree }}" rows="5" placeholder="{{ freePh }}" style="width:100%;padding:14px 16px;border-radius:18px;border:2px solid #C9BFFF;background:#FFFFFF;color:#1E1B4B;font-size:16px;line-height:1.6;resize:vertical"></textarea>
+        </sc-if>
+        <sc-if value="{{ showReasons }}">
+          <textarea value="{{ reasons }}" onChange="{{ onReasons }}" rows="3" placeholder="{{ t.reasonsPh }}" style="width:100%;padding:14px 16px;border-radius:18px;border:2px solid #C9BFFF;background:#FFFFFF;color:#1E1B4B;font-size:16px;line-height:1.6;resize:vertical"></textarea>
+        </sc-if>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <sc-if value="{{ showMic }}"><button onClick="{{ toggleMic }}" style="min-height:40px;padding:0 14px;border-radius:999px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;border:2px solid #6D28D9;background:{{ micBg }};color:{{ micFg }}">● {{ micLabel }}</button></sc-if>
+          <sc-if value="{{ showSuggest }}"><button onClick="{{ suggest }}" style="min-height:40px;padding:0 14px;border-radius:999px;border:2px solid #C9BFFF;background:#FFFFFF;color:#1E1B4B;font:inherit;font-size:13px;font-weight:600;cursor:pointer">{{ suggestLabel }}</button></sc-if>
+          <sc-if value="{{ canHint }}"><button onClick="{{ hint }}" style="min-height:40px;padding:0 14px;border-radius:999px;border:2px solid #C9BFFF;background:#FFFFFF;color:#1E1B4B;font:inherit;font-size:13px;font-weight:600;cursor:pointer">? {{ t.hint }}</button></sc-if>
+          <sc-if value="{{ freeAllowed }}"><button onClick="{{ toggleFree }}" style="min-height:40px;padding:0 14px;border-radius:999px;border:2px solid #C9BFFF;background:#FFFFFF;color:#1E1B4B;font:inherit;font-size:13px;font-weight:600;cursor:pointer">✎ {{ freeToggleLabel }}</button></sc-if>
+          <sc-if value="{{ canAdjourn }}"><button onClick="{{ openAdj }}" style="min-height:40px;padding:0 14px;border-radius:999px;border:2px solid #C9BFFF;background:#FFFFFF;color:#1E1B4B;font:inherit;font-size:13px;font-weight:600;cursor:pointer">{{ adjLabel }}</button></sc-if>
+          <sc-if value="{{ showFinishW }}"><button onClick="{{ finishWitness }}" style="min-height:40px;padding:0 14px;border-radius:999px;border:2px solid #C9BFFF;background:#FFFFFF;color:#1E1B4B;font:inherit;font-size:13px;font-weight:600;cursor:pointer">{{ t.finishW }}</button></sc-if>
+        </div>
+        <button onClick="{{ submit }}" style="min-height:58px;border-radius:999px;border:0;color:#FFFFFF;font:inherit;font-size:17px;font-weight:700;letter-spacing:0.04em;cursor:pointer;background:{{ submitBg }};transition:transform .1s" style-active="transform:scale(0.98)">{{ t.submit }}</button>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="flex:1 1 300px;min-width:0;position:sticky;top:76px;max-height:calc(100dvh - 92px);display:flex;flex-direction:column;gap:12px;border-radius:24px;background:#EDE9FE;padding:12px">
+    <div style="display:flex;padding:4px;border-radius:999px;background:#E4DEFF">
+      <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="3">
+        <button onClick="{{ tb.go }}" style="flex:1;min-height:38px;border-radius:999px;border:0;background:{{ tb.bg }};color:{{ tb.fg }};font:inherit;font-size:13px;font-weight:600;cursor:pointer">{{ tb.label }}</button>
+      </sc-for>
+    </div>
+    <div ref="{{ logRef }}" style="flex:1;overflow-y:auto;padding:6px 8px 10px;display:flex;flex-direction:column;gap:14px">
+      <sc-if value="{{ tabRecord }}">
+        <sc-for list="{{ logView }}" as="e" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <sc-if value="{{ e.isClerk }}"><span style="align-self:center;font-size:11px;color:#5B5B8A;padding:3px 10px;border-radius:999px;background:#FFFFFF">{{ e.text }}</span></sc-if>
+            <sc-if value="{{ e.isTalk }}">
+              <span style="font-size:11px;letter-spacing:0.08em;font-weight:700">{{ e.tag }} <span style="font-weight:400;letter-spacing:0;color:#5B5B8A">· {{ e.who }}</span></span>
+              <span style="font-size:14px;line-height:1.55;padding:10px 12px;border-radius:4px 16px 16px 16px;background:#FFFFFF">{{ e.text }}</span>
+            </sc-if>
+          </div>
+        </sc-for>
+      </sc-if>
+      <sc-if value="{{ tabCase }}">
+        <sc-for list="{{ C.story }}" as="para" hint-placeholder-count="5">
+          <p style="margin:0;font-size:14px;line-height:1.65">{{ para }}</p>
+        </sc-for>
+        <span style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#5B5B8A;padding-top:6px">{{ t.exhibits }}</span>
+        <sc-for list="{{ exhibitList }}" as="x" hint-placeholder-count="5">
+          <button onClick="{{ x.open }}" style="text-align:left;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;font:inherit;font-size:13px;background:#FFFFFF;border:0;border-radius:14px;padding:10px 12px;color:#1E1B4B;cursor:pointer">
+            <span style="font-weight:700">{{ x.id }}</span><span>{{ x.name }}</span><span style="font-size:11px;color:#5B5B8A">{{ x.status }}</span>
+          </button>
+        </sc-for>
+      </sc-if>
+      <sc-if value="{{ tabLaw }}">
+        <sc-for list="{{ C.laws }}" as="l" hint-placeholder-count="5">
+          <div style="display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:14px;background:#FFFFFF">
+            <span style="font-size:12px;font-weight:700">{{ l.sec }} — {{ l.title }}</span>
+            <span style="font-size:13px;line-height:1.55">{{ l.plain }}</span>
+            <span style="font-size:12px;color:#5B5B8A">{{ t.punish }}: {{ l.punish }}</span>
+          </div>
+        </sc-for>
+        <span style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#5B5B8A">{{ t.words }}</span>
+        <sc-for list="{{ gloss }}" as="g" hint-placeholder-count="6">
+          <div style="font-size:13px;line-height:1.5"><span style="font-weight:700">{{ g.w }}</span> <span style="color:#3F3D6B">— {{ g.d }}</span></div>
+        </sc-for>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isResult }}" hint-placeholder-val="{{ false }}">
+<div style="max-width:1080px;margin:0 auto;padding:32px 20px 80px;display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+  <div style="flex:1 1 100%;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:28px 20px;border-radius:28px;background:#6D28D9;color:#FFFFFF">
+    <span style="font-size:12px;letter-spacing:0.2em;color:#A5A3C9">{{ resultKicker }}</span>
+    <span style="font-size:clamp(44px,8vw,64px);letter-spacing:0.12em;line-height:1">{{ resultStars }}</span>
+    <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:clamp(30px,5vw,44px);font-weight:700;line-height:1.1">{{ passLabel }}</span>
+    <span style="font-size:15px;color:#C9BFFF">{{ pctLabel }} · ★ {{ resultPts }}</span>
+  </div>
+  <div style="flex:1 1 560px;min-width:0;display:flex;flex-direction:column;gap:44px">
+    <div style="display:flex;flex-direction:column;gap:12px;padding-bottom:32px;border-bottom:1px solid #6D28D9">
+      <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#5B5B8A;text-align:center">{{ t.inTheCourt }} {{ C.court }}</span>
+      <span style="font-size:13px;color:#5B5B8A;text-align:center">{{ C.caseNo }} · {{ C.title }}</span>
+      <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;padding-top:22px">{{ t.courtSaid }}</span>
+      <span style="font-family:'Spectral',serif;font-size:clamp(28px,4vw,40px);font-weight:600;line-height:1.15">{{ courtVerdict }}</span>
+      <sc-if value="{{ hasJudgmentText }}"><span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:17px;line-height:1.7;text-wrap:pretty">{{ judgmentText }}</span></sc-if>
+      <span style="font-size:16px;line-height:1.55">{{ sentenceText }}</span>
+      <sc-if value="{{ hasReasons }}"><span style="font-size:15px;color:#3F3D6B;font-style:italic">“{{ reasonsShown }}”</span></sc-if>
+      <span style="font-size:14px;text-align:right;padding-top:12px">Sd/- {{ judgeName }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#5B5B8A">{{ t.byLaw }}</span>
+      <span style="font-family:'Spectral',serif;font-size:28px;font-weight:600;line-height:1.2">{{ correctVerdict }}</span>
+      <span style="font-size:16px;line-height:1.7;text-wrap:pretty">{{ correctWhy }}</span>
+      <sc-if value="{{ wrongVerdict }}"><span style="font-size:14px;font-weight:600">✕ {{ t.appeal }}</span></sc-if>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:28px;background:#6D28D9;color:#FFFFFF">
+      <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#A5A3C9">{{ t.winner }}</span>
+      <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:38px;font-weight:600;line-height:1.1">{{ winnerName }}</span>
+      <span style="font-size:15px;line-height:1.6;color:#C9BFFF">{{ sideLine }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#5B5B8A">{{ t.lesson }}</span>
+      <span style="font-family:'Spectral',serif;font-size:26px;font-weight:600;line-height:1.25">{{ C.lesson.title }}</span>
+      <sc-for list="{{ C.lesson.points }}" as="lp" hint-placeholder-count="4">
+        <div style="display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px;font-size:16px;line-height:1.6;padding:8px 0;border-bottom:1px solid #EDE9FE"><span>—</span><span>{{ lp }}</span></div>
+      </sc-for>
+    </div>
+    <sc-if value="{{ hasMistakes }}">
+      <div style="display:flex;flex-direction:column">
+        <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#5B5B8A;padding-bottom:6px">{{ t.review }}</span>
+        <sc-for list="{{ mistakes }}" as="m" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:6px;padding:16px 0;border-bottom:1px solid #E4DEFF">
+            <span style="font-size:13px;color:#5B5B8A">{{ m.prompt }}</span>
+            <span style="font-size:15px;line-height:1.55"><span style="font-weight:600">✕ {{ t.youSaid }}:</span> {{ m.text }}</span>
+            <span style="font-size:15px;line-height:1.55"><span style="font-weight:600">✓ {{ t.better }}:</span> {{ m.best }}</span>
+            <span style="font-size:13px;line-height:1.55;color:#3F3D6B">{{ m.why }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+  <div style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#5B5B8A">{{ t.yourResult }} · {{ myRoleName }}</span>
+      <div style="display:flex;align-items:baseline;gap:14px">
+        <span style="font-family:'Spectral',serif;font-size:64px;font-weight:600;line-height:1">{{ pctLabel }}</span>
+        <span style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;font-weight:600">{{ passLabel }}</span>
+      </div>
+      <span style="font-size:14px;color:#3F3D6B;line-height:1.55">{{ passNote }}</span>
+      <sc-for list="{{ critRows }}" as="cr" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:6px;padding-top:6px">
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span>{{ cr.label }}</span><span style="font-variant-numeric:tabular-nums">{{ cr.val }}</span></div>
+          <div style="height:2px;background:#E4DEFF"><div style="height:100%;background:#6D28D9;width:{{ cr.pct }}"></div></div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <sc-if value="{{ hasNextLevel }}">
+        <button onClick="{{ nextLevel }}" style="min-height:52px;border-radius:999px;border:0;background:#6D28D9;color:#FFFFFF;font:inherit;font-size:15px;font-weight:500;cursor:pointer">{{ nextLevelLabel }}  →</button>
+      </sc-if>
+      <button onClick="{{ replay }}" style="min-height:48px;border-radius:999px;border:1px solid #6D28D9;background:#FFFFFF;color:#1E1B4B;font:inherit;cursor:pointer">{{ replayLabel }}</button>
+      <button onClick="{{ getReview }}" style="min-height:44px;border:0;background:transparent;color:#1E1B4B;font:inherit;text-decoration:underline;cursor:pointer">{{ reviewBtn }}</button>
+      <sc-if value="{{ hasReview }}"><p style="margin:0;font-size:15px;line-height:1.7;white-space:pre-wrap">{{ review }}</p></sc-if>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showDoc }}">
+<div onClick="{{ closeDoc }}" style="position:fixed;inset:0;background:rgba(10,10,10,0.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:40">
+  <div style="max-width:560px;width:100%;max-height:86dvh;overflow-y:auto;background:#FFFFFF;padding:36px 32px;display:flex;flex-direction:column;gap:14px">
+    <span style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#5B5B8A;text-align:center">{{ t.inTheCourt }} {{ C.court }}</span>
+    <span style="font-size:12px;color:#5B5B8A;text-align:center">{{ C.caseNo }}</span>
+    <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;font-weight:600;text-align:center;padding-top:10px">{{ t.exhibit }} {{ doc.id }}</span>
+    <span style="font-family:'Spectral',serif;font-size:28px;font-weight:600;text-align:center;padding-bottom:10px;border-bottom:1px solid #6D28D9">{{ doc.name }}</span>
+    <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:18px;line-height:1.7;text-wrap:pretty">{{ doc.plain }}</span>
+    <sc-if value="{{ doc.hasBody }}"><span style="font-size:15px;line-height:1.7;color:#1E1B4B;text-wrap:pretty">{{ doc.body }}</span></sc-if>
+    <span style="font-size:13px;color:#5B5B8A">{{ doc.status }}</span>
+    <span style="font-size:12px;color:#5B5B8A;text-align:right;padding-top:12px">{{ t.tapClose }}</span>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showOverlay }}">
+<div style="position:fixed;inset:0;background:rgba(10,10,10,0.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:30">
+  <div style="max-width:440px;width:100%;background:#FFFFFF;padding:36px 28px;display:flex;flex-direction:column;gap:14px;text-align:center">
+    <span style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;font-weight:600">{{ t.adjournedT }}</span>
+    <span style="font-family:'Spectral',serif;font-size:30px;font-weight:600">{{ t.nextDate }} {{ overlayDate }}</span>
+    <span style="font-size:15px;line-height:1.55;color:#3F3D6B">{{ overlayNote }}</span>
+    <button onClick="{{ resume }}" style="min-height:48px;border-radius:999px;border:0;background:#6D28D9;color:#FFFFFF;font:inherit;cursor:pointer">{{ resumeLabel }}</button>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showAdjModal }}">
+<div style="position:fixed;inset:0;background:rgba(10,10,10,0.55);display:flex;align-items:flex-end;justify-content:center;z-index:30">
+  <div style="max-width:640px;width:100%;background:#FFFFFF;padding:28px 24px;display:flex;flex-direction:column">
+    <span style="font-family:'Spectral','IBM Plex Sans Devanagari',serif;font-size:24px;font-weight:600">{{ t.adjAsk }}</span>
+    <span style="font-size:14px;color:#3F3D6B;padding:6px 0 10px">{{ t.adjHelp }}</span>
+    <sc-for list="{{ adjReasons }}" as="ar" hint-placeholder-count="3">
+      <button onClick="{{ ar.pick }}" style="text-align:left;padding:16px 0;border:0;border-bottom:1px solid #E4DEFF;background:transparent;color:#1E1B4B;font:inherit;font-size:16px;cursor:pointer">{{ ar.t }}  →</button>
+    </sc-for>
+    <button onClick="{{ closeAdj }}" style="align-self:flex-start;margin-top:14px;padding:0;border:0;background:transparent;color:#5B5B8A;font:inherit;text-decoration:underline;cursor:pointer">{{ t.cancel }}</button>
+  </div>
+</div>
+</sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;timerMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;By level&quot;,&quot;Relaxed (x2)&quot;,&quot;Off&quot;],&quot;default&quot;:&quot;Relaxed (x2)&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;adjournLimit&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:2,&quot;min&quot;:0,&quot;max&quot;:5,&quot;tsType&quot;:&quot;number&quot;},&quot;aiSkill&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Easy&quot;,&quot;Fair&quot;,&quot;Sharp&quot;],&quot;default&quot;:&quot;Sharp&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;autoAdvance&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const RN={judge:{en:'Judge',hi:'न्यायाधीश'},pros:{en:'Prosecutor',hi:'अभियोजक'},def:{en:'Defence advocate',hi:'बचाव वकील'},accused:{en:'Accused',hi:'अभियुक्त'},witness:{en:'Witness',hi:'गवाह'},clerk:{en:'Court Master',hi:'कोर्ट मास्टर'}};
+const RD={judge:{en:'Listen to both sides, decide objections, and give a fair judgment.',hi:'दोनों पक्ष सुनें, आपत्तियों पर निर्णय दें, निष्पक्ष फ़ैसला सुनाएँ।'},pros:{en:'The government\'s lawyer. Prove the accused did it.',hi:'सरकारी वकील। सिद्ध करें कि अपराध अभियुक्त ने किया।'},def:{en:'The accused\'s lawyer. Find the weak spots and raise doubt.',hi:'अभियुक्त का वकील। कमज़ोरियाँ खोजें, संदेह पैदा करें।'},accused:{en:'The person on trial. Enter your plea, then watch and learn.',hi:'जिस पर मुकदमा है। दलील दें, फिर देखें और सीखें।'},witness:{en:'Answer questions as each witness. Not scored.',hi:'हर गवाह बनकर उत्तर दें। अंक नहीं।'}};
+const GOAL={judge:{en:'Stay neutral. Rule correctly on each objection and request, then decide only on what was proved in court. You score for rulings and a judgment that matches the law.',hi:'निष्पक्ष रहें। हर आपत्ति पर सही निर्णय दें और केवल अदालत में सिद्ध बातों पर फ़ैसला करें।'},pros:{en:'Bring out the facts with open questions, put the right exhibits on record, object when the defence goes too far, and link the evidence to the right sections.',hi:'खुले प्रश्नों से तथ्य सामने लाएँ, सही प्रदर्श रिकॉर्ड पर लाएँ, और साक्ष्य को सही धाराओं से जोड़ें।'},def:{en:'Test every witness, object to unfair questions, summon evidence that helps your client in time, and show the court where the doubt lies.',hi:'हर गवाह को परखें, अनुचित प्रश्नों पर आपत्ति करें, समय पर सहायक साक्ष्य मंगाएँ और संदेह दिखाएँ।'},accused:{en:'Choose your plea. Your lawyer argues for you — watch how each step works.',hi:'अपनी दलील चुनें। आपका वकील आपकी ओर से बहस करेगा।'},witness:{en:'Answer as each witness would. Witnesses are not scored — choose an advocate or judge to pass levels.',hi:'हर गवाह की तरह उत्तर दें। गवाहों को अंक नहीं मिलते।'}};
+const ROLE_ORDER=['judge','pros','def','accused','witness'];
+const COL={judge:'#7C3AED',pros:'#2563EB',def:'#DB2777',accused:'#EA580C',witness:'#0D9488',clerk:'#475569'};
+const LVCOL={1:'#16A34A',2:'#2563EB',3:'#DB2777'};
+const PH={en:['Filing','Charges','Prosecution evidence','Defence evidence','Final arguments','Judgment'],hi:['दाखिला','आरोप','अभियोजन साक्ष्य','बचाव साक्ष्य','अंतिम बहस','फ़ैसला']};
+const LV={1:{timer:0,feedback:true,hints:true},2:{timer:180,feedback:true,hints:true},3:{timer:120,feedback:false,hints:false}};
+const CRIT={law:{en:'Using the right law',hi:'सही कानून'},evi:{en:'Using evidence',hi:'साक्ष्य का उपयोग'},wit:{en:'Questioning witnesses',hi:'गवाहों से प्रश्न'},obj:{en:'Objections',hi:'आपत्तियाँ'},rsn:{en:'Judicial reasoning',hi:'न्यायिक तर्क'},time:{en:'Time management',hi:'समय प्रबंधन'}};
+const AITYPES=[{en:'Surprise me',hi:'कुछ भी नया'},{en:'Theft',hi:'चोरी'},{en:'Property dispute',hi:'संपत्ति विवाद'},{en:'Cheating / fraud',hi:'धोखाधड़ी'},{en:'Road accident',hi:'सड़क दुर्घटना'},{en:'Assault',hi:'मारपीट'},{en:'Divorce / family',hi:'तलाक / परिवार'},{en:'Consumer complaint',hi:'उपभोक्ता शिकायत'},{en:'Cyber crime',hi:'साइबर अपराध'}];
+const SYNC=['screen','mode','level','aiLevel','steps','turnIdx','ph','log','flags','moves','phase','cur','fb','fbFor','laterNote','nextIdx','qn','qPhase','timeLeft','overlay','pendingAdj','lastWitness','adjLeft','adjCount','seats','ready'];
+const DATES=['22 April 2026','6 May 2026','20 May 2026','3 June 2026'];
+const STR={en:{badge:'Learn law by playing it',heroTitle:'Step into a real Indian courtroom.',heroSub:'No law background needed. Each case comes with the full story and the law in simple words. Play as judge, lawyer, accused or witness — and learn why every step of a trial matters.',chooseLevel:'Choose a level',chooseRole:'Choose your role',otherSeats:'Other seats',human:'Friend',room:'Room code',roomHelp:'Friends join on their own phone with this code. Empty seats are played by AI.',share:'Copy invite link',copied:'Invite link copied',unlockAll:'Unlock all levels (preview)',passed:'Passed',locked:'Locked — pass the previous level',start:'Start',noTimer:'No time limit · tips after every move',timed:'min per move',tipsOn:'tips after every move',tipsOff:'feedback only at the end',aiTitle:'A brand-new case, every time',aiSub:'AI writes a fresh case file, plays the other lawyers and witnesses, answers YOUR own questions, and judges your arguments like a real court. Difficulty follows the level selected above. Needs internet.',story:'What happened',timeline:'Timeline',people:'People in the case',exhibits:'Evidence (exhibits)',tapExhibit:'Tap an exhibit to read the document.',yourRole:'Your role',winRule:'The winner is decided by the law and the evidence — not by who speaks more. You pass the level by playing your role well.',lawSimple:'The law, in simple words',punish:'Punishment',inThisCase:'In this case',words:'Court words explained',back:'Back',enter:'Enter the courtroom',caseFile:'Case file',stampFiled:'FILED',bench:'BENCH',witnessBox:'WITNESS BOX',dock:'DOCK',prosTable:'PROSECUTION',defTable:'DEFENCE',speakingNow:'Speaking',whatsHappening:'What\'s happening',better:'Better move',laterNote:'Your feedback is saved for the end of the case (Level 3).',continue:'Continue',seeResult:'See the judgment',listen:'Listen',waitingFor:'Waiting on their phone',handoffHelp:'This seat belongs to a friend. In this preview you can play their turn.',takeOver:'Play their turn',submit:'Submit to the court',ownWords:'Write in my own words',useOptions:'Choose from options',freePh:'Speak to the court in your own words. Mention the facts, exhibits (like P-2) and sections.',reasonsPh:'Your reasons — which evidence convinced you?',hint:'Hint: remove a weak option',suggest:'Suggest moves',sugHelp:'Pick one to edit it, or write your own — not every suggestion is a good one.',finishW:'Done with this witness',retry:'Try again',adjourn:'Ask for adjournment',adjAsk:'Why do you need a new date?',adjHelp:'Courts only adjourn for a genuine reason.',cancel:'Cancel',adjournedT:'Court adjourned',nextDate:'Next date:',resume:'Resume hearing',record:'Record',caseTab:'Case',lawTab:'Law',inTheCourt:'In the',courtSaid:'Judgment',stampOpen:'PRONOUNCED IN OPEN COURT',byLaw:'The correct result under law',appeal:'This judgment doesn\'t match the evidence and law — an appeal court would likely overturn it.',winner:'Winner by law',lesson:'Lesson of this case',review:'Where you could do better',youSaid:'You said',yourResult:'Your result',strong:'Strong move',okay:'Okay move',weak:'Weak move',levelPassed:'Level passed',tryAgain:'Try again',notScored:'Not scored',exhibit:'EXHIBIT',tapClose:'Tap anywhere to close',enContent:''},
+hi:{badge:'खेलकर कानून सीखें',heroTitle:'एक असली भारतीय अदालत में कदम रखें।',heroSub:'कानून की पढ़ाई ज़रूरी नहीं। हर मुकदमे के साथ पूरी कहानी और सरल भाषा में कानून मिलता है। न्यायाधीश, वकील, अभियुक्त या गवाह बनें — और सीखें कि मुकदमे का हर कदम क्यों अहम है।',chooseLevel:'स्तर चुनें',chooseRole:'अपनी भूमिका चुनें',otherSeats:'अन्य सीटें',human:'मित्र',room:'रूम कोड',roomHelp:'मित्र इस कोड से अपने फ़ोन पर जुड़ें। खाली सीटें AI खेलेगा।',share:'निमंत्रण लिंक कॉपी करें',copied:'लिंक कॉपी हुआ',unlockAll:'सभी स्तर खोलें (पूर्वावलोकन)',passed:'पास',locked:'बंद — पिछला स्तर पास करें',start:'शुरू करें',noTimer:'समय सीमा नहीं · हर चाल के बाद सुझाव',timed:'मिनट प्रति चाल',tipsOn:'हर चाल के बाद सुझाव',tipsOff:'प्रतिक्रिया अंत में',aiTitle:'हर बार एक नया मुकदमा',aiSub:'AI नई केस फ़ाइल लिखता है, बाकी वकील और गवाह बनता है, आपके अपने प्रश्नों का उत्तर देता है, और असली अदालत की तरह आपकी बहस परखता है। कठिनाई ऊपर चुने स्तर पर। इंटरनेट ज़रूरी।',story:'क्या हुआ',timeline:'समय-रेखा',people:'मामले के लोग',exhibits:'साक्ष्य (प्रदर्श)',tapExhibit:'दस्तावेज़ पढ़ने के लिए प्रदर्श पर टैप करें।',yourRole:'आपकी भूमिका',winRule:'विजेता कानून और साक्ष्य से तय होता है — ज़्यादा बोलने से नहीं। अपनी भूमिका अच्छे से निभाकर स्तर पास करें।',lawSimple:'कानून, सरल शब्दों में',punish:'सज़ा',inThisCase:'इस मामले में',words:'अदालती शब्दों का अर्थ',back:'वापस',enter:'अदालत में प्रवेश',caseFile:'केस फ़ाइल',stampFiled:'दाखिल',bench:'न्यायपीठ',witnessBox:'गवाह कटघरा',dock:'कटघरा',prosTable:'अभियोजन',defTable:'बचाव',speakingNow:'बोल रहे हैं',whatsHappening:'अभी क्या हो रहा है',better:'बेहतर चाल',laterNote:'आपकी प्रतिक्रिया मुकदमे के अंत में मिलेगी (स्तर 3)।',continue:'आगे बढ़ें',seeResult:'फ़ैसला देखें',listen:'सुनें',waitingFor:'उनके फ़ोन पर प्रतीक्षा',handoffHelp:'यह सीट मित्र की है। पूर्वावलोकन में आप उनकी चाल चल सकते हैं।',takeOver:'उनकी चाल चलें',submit:'अदालत में प्रस्तुत करें',ownWords:'अपने शब्दों में लिखें',useOptions:'विकल्प चुनें',freePh:'अपने शब्दों में अदालत से कहें। तथ्य, प्रदर्श (जैसे P-2) और धाराएँ बताएँ।',reasonsPh:'आपके कारण — किस साक्ष्य ने आपको मनाया?',hint:'संकेत: एक कमज़ोर विकल्प हटाएँ',suggest:'सुझाव दें',sugHelp:'किसी एक को चुनकर बदलें, या खुद लिखें — हर सुझाव अच्छा नहीं है।',finishW:'इस गवाह से प्रश्न समाप्त',retry:'फिर प्रयास करें',adjourn:'स्थगन माँगें',adjAsk:'नई तारीख क्यों चाहिए?',adjHelp:'अदालत केवल वास्तविक कारण पर स्थगन देती है।',cancel:'रद्द करें',adjournedT:'सुनवाई स्थगित',nextDate:'अगली तारीख:',resume:'सुनवाई जारी करें',record:'रिकॉर्ड',caseTab:'मामला',lawTab:'कानून',inTheCourt:'',courtSaid:'फ़ैसला',stampOpen:'खुली अदालत में सुनाया गया',byLaw:'कानून के अनुसार सही परिणाम',appeal:'यह फ़ैसला साक्ष्य और कानून से मेल नहीं खाता — अपील में बदला जा सकता है।',winner:'कानून के अनुसार विजेता',lesson:'इस मुकदमे की सीख',review:'जहाँ आप बेहतर कर सकते थे',youSaid:'आपने कहा',yourResult:'आपका परिणाम',strong:'मज़बूत चाल',okay:'ठीक चाल',weak:'कमज़ोर चाल',levelPassed:'स्तर पास',tryAgain:'फिर प्रयास करें',notScored:'अंक नहीं',exhibit:'प्रदर्श',tapClose:'बंद करने के लिए कहीं भी टैप करें',enContent:'इस स्तर की केस सामग्री अंग्रेज़ी में है। पूरी हिंदी के लिए AI लाइव केस खेलें।'}};
+const kw=(t,list)=>{t=(t||'').toLowerCase();return (list||[]).filter(k=>t.includes(k)).length;};
+const AIP={
+  filing:{en:()=>'File the chargesheet. Which offences (with sections) and why?',hi:()=>'आरोप-पत्र दाखिल करें। कौन-से अपराध (धाराओं सहित) और क्यों?'},
+  charges:{en:()=>'Frame the charges. Which sections will this trial be about?',hi:()=>'आरोप तय करें। मुकदमा किन धाराओं पर चलेगा?'},
+  plea:{en:()=>'The charges are read out to you. How do you plead?',hi:()=>'आरोप पढ़कर सुनाए गए। आप क्या कहते हैं?'},
+  chief:{en:(w,q)=>`Examination-in-chief of ${w.id} ${w.name} (${w.role}). Ask an open question — don't suggest the answer.${q?` (Question ${q+1} of up to 4)`:''}`,hi:(w,q)=>`${w.id} ${w.name} की मुख्य परीक्षा। खुला प्रश्न पूछें — उत्तर न सुझाएँ।${q?` (प्रश्न ${q+1}/4)`:''}`},
+  cross:{en:(w,q)=>`Cross-examine ${w.id} ${w.name}. Test their story — leading questions are allowed here.${q?` (Question ${q+1} of up to 4)`:''}`,hi:(w,q)=>`${w.id} ${w.name} से जिरह करें। कहानी परखें — यहाँ सूचक प्रश्न चलते हैं।${q?` (प्रश्न ${q+1}/4)`:''}`},
+  args:{en:(w,q,r)=>`Final arguments for the ${r==='pros'?'prosecution':'defence'}. Sum up the facts, exhibits and sections.`,hi:(w,q,r)=>`${r==='pros'?'अभियोजन':'बचाव'} की अंतिम बहस। तथ्य, प्रदर्श और धाराएँ बताएँ।`},
+  verdict:{en:()=>'Choose your verdict, then write your reasons.',hi:()=>'अपना फ़ैसला चुनें, फिर कारण लिखें।'}};
+
+class Component extends DCLogic {
+  state={screen:'home',lang:'en',myRole:'pros',level:1,mode:'script',seats:{judge:'ai',pros:'ai',def:'ai',accused:'ai',witness:'ai'},copied:false,progress:{passed:{},best:{},all:false},
+    turnIdx:0,ph:-1,log:[],flags:{},moves:[],phase:'idle',cur:null,fb:null,sel:null,freeMode:false,freeText:'',reasons:'',hidden:[],timeLeft:0,
+    tab:'record',adjLeft:{pros:2,def:2},adjModal:false,overlay:null,pendingAdj:null,adjCount:0,lastWitness:null,actingFor:null,review:'',reviewing:false,nextIdx:0,
+    aiType:'Surprise me',aiCase:null,aiLevel:1,aiGen:'idle',aiErr:'',steps:[],qn:0,qPhase:'ask',suggestions:[],sugBusy:false,voice:false,listening:false,docView:null,thinkMsg:'',netRole:null,room:'',peers:[],myName:'',joinCode:'',netErr:'',netStatus:'',sbUrl:'',sbKey:'',remoteBy:null,fbFor:null,afterPending:false,lastQ:'',ready:[],netV:0,homeStep:'title',flowMode:'level'};
+  logRef=React.createRef(); tok=0; afterShow=null; retryFn=null; lastQ='';
+  componentDidMount(){try{const p=JSON.parse(localStorage.getItem('adalat-progress-v2')||'null');if(p)this.setState({progress:p});}catch(e){}let nm='';try{nm=localStorage.getItem('adalat-name')||'';}catch(e){}if(!nm)nm='Player '+Math.floor(10+Math.random()*90);let rc='';try{rc=(new URLSearchParams(location.search).get('room')||'').toUpperCase();if(rc)history.replaceState(null,'',location.pathname);}catch(e){}this.setState({myName:nm,joinCode:rc,homeStep:rc?'friends':'title'});
+    this.iv=setInterval(()=>this.tick(),1000);if(!window.ADALAT||!window.AdalatAI||!window.AdalatNet){this.poll=setInterval(()=>{if(window.ADALAT&&window.AdalatAI&&window.AdalatNet){clearInterval(this.poll);this.forceUpdate();}},150);}}
+  componentWillUnmount(){clearInterval(this.hb);clearTimeout(this.bq);this.net&&this.net.leave();clearInterval(this.iv);clearInterval(this.poll);clearTimeout(this.to);this.stopMic&&this.stopMic();window.AdalatFX&&AdalatFX.stop();}
+  componentDidUpdate(pp,ps){const s=this.state;if(!ps||!ps.log)return;this.netSync(ps);
+    if(ps.log.length!==s.log.length&&s.tab==='record'){const el=this.logRef.current;if(el)el.scrollTop=el.scrollHeight;}
+    if(s.cur&&ps.cur!==s.cur&&window.AdalatFX){if(s.cur.kind==='order')AdalatFX.gavel();if(s.voice)AdalatFX.say(s.cur.text,s.lang);}}
+  get C(){return this.state.mode==='ai'?this.state.aiCase:window.ADALAT.CASES[this.state.level-1];}
+  get T(){return this.state.mode==='ai'?[]:this.C.turns;}
+  lvl(){return this.state.mode==='ai'?this.state.aiLevel:this.state.level;}
+  aiOK(){return !!(window.AdalatAI&&AdalatAI.available());}
+  lim(){const base=LV[this.lvl()].timer;const m=this.props.timerMode??'By level';return m==='Off'?0:m==='Relaxed (x2)'?base*2:base;}
+  isHuman(r){return r===this.state.myRole||this.state.seats[r]==='human'||!!this.peerFor(r);}
+  nameFor(r,tn){const s=this.state,L=s.lang;if(r==='clerk')return RN.clerk[L];
+    if(r==='witness'){if(tn&&tn.w)return tn.w;return s.lastWitness||'Witness';}
+    if(r===s.myRole)return s.netRole?(s.myName||'Host'):(L==='hi'?'आप':'You');{const pr=this.peerFor(r);if(pr)return pr.name+' · '+RN[r][L];}if(s.seats[r]==='human')return (L==='hi'?'मित्र':'Friend')+' · '+RN[r][L];return this.C.names[r];}
+  noAiMsg(){return this.state.lang==='hi'?'AI से जुड़ नहीं पाए। इंटरनेट जाँचें और फिर प्रयास करें।':'Couldn\'t reach the AI. Check your internet connection and try again.';}
+  saveProg(p){this.setState({progress:p});try{localStorage.setItem('adalat-progress-v2',JSON.stringify(p));}catch(e){}}
+  // ---------- curTurn (both modes) ----------
+  curTurn(){const s=this.state;if(s.mode!=='ai')return this.T[s.turnIdx];const S=s.steps[s.turnIdx];if(!S)return null;const C=this.C,L=s.lang;
+    if(S.role==='clerk')return {role:'clerk',step:S.step,ph:S.ph,o:[],p:''};
+    if(s.qPhase==='answer')return {role:'witness',step:'answer',ph:S.ph,w:S.w.id+' '+S.w.name,o:[],p:(L==='hi'?`${S.w.name} के रूप में उत्तर दें: “${this.lastQ}”`:`As ${S.w.name}, answer: “${this.lastQ}”`)};
+    let o=[];if(S.step==='plea')o=[{t:L==='hi'?'निर्दोष। मुकदमा चलाया जाए।':'Not guilty. I claim trial.'},{t:L==='hi'?'मैं दोष स्वीकार करता हूँ।':'I plead guilty.',f:'guilty'}];
+    else if(S.step==='verdict')o=['full','part','acq'].map(v=>({t:C.verdicts[v],v}));else o=s.suggestions.map(t=>({t,sug:1}));
+    return {role:S.role,step:S.step,ph:S.ph,w:S.w?S.w.id+' '+S.w.name:null,o,p:AIP[S.step][L](S.w,s.qn,S.role)};}
+  tick(){const s=this.state;if(s.netRole==='guest')return;const rp=s.phase==='handoff'&&s.screen==='court'?this.peerFor((this.curTurn()||{}).role):null;if(s.screen!=='court'||!(s.phase==='acting'||rp)||s.adjModal||!this.lim())return;if(rp&&s.timeLeft<=1){this.setState({remoteBy:rp.id,actingFor:null,phase:'acting',timeLeft:1},()=>this.tick());return;}
+    if(s.timeLeft>1){this.setState({timeLeft:s.timeLeft-1});return;}
+    if(s.mode==='ai'){const tn=this.curTurn();if(tn.o.length&&!tn.o[0].sug&&s.sel===null)this.setState({sel:tn.step==='verdict'?2:0},()=>this.aiSubmit(true));
+      else{if(!s.freeText.trim())this.setState({freeText:s.lang==='hi'?'(कुछ प्रस्तुत नहीं — समय समाप्त)':'(Nothing submitted — time ran out)'},()=>this.aiSubmit(true));else this.aiSubmit(true);}return;}
+    const tn=this.T[s.turnIdx];let worst=0;tn.o.forEach((o,i)=>{if((o.g??2)<(tn.o[worst].g??2))worst=i;});this.resolve(s.sel??worst,{timedOut:true});}
+  rollCall(){const C=this.C,L=this.state.lang;return {kind:'talk',role:'clerk',who:RN.clerk[L],text:L==='hi'?`${C.caseNo}, ${C.title}। अभियोजन उपस्थित? बचाव पक्ष उपस्थित? अभियुक्त उपस्थित? — सभी पक्ष उपस्थित, माननीय।`:`Calling ${C.caseNo}, ${C.title}. Prosecution present? Defence present? Accused present? — All parties are present, Your Honour.`};}
+  oath(name){const L=this.state.lang;return {kind:'talk',role:'clerk',who:RN.clerk[L],text:L==='hi'?`${name} गवाह कटघरे में आते हैं और शपथ लेते हैं: “मैं सत्यनिष्ठा से प्रतिज्ञान करता/करती हूँ कि मैं सत्य, पूर्ण सत्य और सत्य के सिवा कुछ नहीं कहूँगा/कहूँगी।”`:`${name} enters the witness box and takes the oath: “I solemnly affirm that I will speak the truth, the whole truth, and nothing but the truth.”`};}
+  // ---------- scripted mode ----------
+  startCase(){if(this.state.netRole==='guest')return;if(this.state.mode==='ai')return this.startAi();const L=this.state.lang,C=this.C;const lim=this.props.adjournLimit??2;
+    const log=[{kind:'clerk',text:(L==='hi'?'अदालत की कार्यवाही आरंभ':'Court is in session')},this.rollCall()];
+    this.setState({screen:'court',tab:'record',adjLeft:{pros:lim,def:lim},adjCount:0,review:'',ph:-1,lastWitness:null,overlay:null,pendingAdj:null},()=>this.enterTurn(0,{log,flags:{},moves:[]}));}
+  enterTurn(i,patch){const T=this.T;const f=patch.flags;while(i<T.length&&T[i].cond&&!T[i].cond(f))i++;
+    clearTimeout(this.to);this.afterShow=null;
+    if(i>=T.length){this.finish(patch);return;}
+    const tn=T[i];const log=[...patch.log];
+    if(tn.ph!==this.state.ph)log.push({kind:'clerk',text:'— '+PH[this.state.lang][tn.ph]+' —'});
+    if(tn.role==='witness'&&tn.w!==this.state.lastWitness)log.push(this.oath(tn.w));
+    const human=this.isHuman(tn.role);const phase=!human?'thinking':tn.role!==this.state.myRole?'handoff':'acting';
+    this.setState({...patch,log,turnIdx:i,ph:tn.ph,sel:null,freeMode:false,freeText:'',reasons:'',hidden:[],timeLeft:this.lim(),phase,cur:null,fb:null,actingFor:null,remoteBy:null,lastWitness:tn.role==='witness'?tn.w:this.state.lastWitness,thinkMsg:''});
+    if(!human){const id=++this.tok;this.to=setTimeout(()=>{if(this.tok===id)this.aiAct();},2600+Math.random()*1400);}}
+  async aiAct(){const s=this.state;const tn=this.T[s.turnIdx];const p={Easy:0.45,Fair:0.7,Sharp:0.92}[this.props.aiSkill??'Fair']??0.7;let idx=0;
+    const best=tn.o.findIndex(o=>o.g===2);
+    if(tn.role==='witness'){const fq=s.flags['free_'+tn.q];
+      if(fq&&this.aiOK()){const id=this.tok;try{const a=await AdalatAI.witness({c:this.C,w:{name:tn.w,role:tn.w,knows:this.C.story.join(' ')},q:fq,log:s.log,lang:s.lang});if(this.tok===id)this.resolve(0,{byAi:true,text:a});return;}catch(e){}}
+      idx=s.flags['c_'+tn.q]??0;}
+    else if(tn.step==='verdict')idx=tn.o.findIndex(o=>o.v===this.C.correct(s.flags));
+    else if(tn.role==='judge'||tn.role==='accused')idx=Math.max(0,best);
+    else if(Math.random()<p)idx=Math.max(0,best);
+    else{const others=tn.o.map((o,i)=>i).filter(i=>i!==best);idx=others[Math.floor(Math.random()*others.length)]??0;}
+    this.resolve(Math.max(0,Math.min(idx,tn.o.length-1)),{byAi:true});}
+  async scriptFreeSubmit(){const s=this.state,tn=this.T[s.turnIdx];this.setState({phase:'thinking',thinkMsg:s.lang==='hi'?'अदालत आपकी बात पर विचार कर रही है…':'The court is considering your words…'});const id=++this.tok;let r=null;
+    if(this.aiOK()&&tn.role!=='witness'){try{r=await AdalatAI.assess({c:this.C,role:tn.role,step:tn.step,w:tn.w?{name:tn.w}:null,text:s.freeText.trim(),log:s.log,lang:s.lang});}catch(e){r=null;}}
+    if(this.tok!==id)return;this.resolve(0,{aiAssess:r});}
+  resolve(idx,opt){opt=opt||{};const s=this.state;const tn=this.T[s.turnIdx];const C=this.C;const f={...s.flags};const log=[...s.log];const moves=[...s.moves];
+    const useFree=!opt.byAi&&s.freeMode&&s.freeText.trim().length>0&&!opt.timedOut;let text,o=tn.o[idx],g=null,why='',bestO=tn.o.find(x=>x.g===2)||tn.o[0],betterText=null;
+    if(opt.text){text=opt.text;f['c_'+tn.id]=idx;o=null;}
+    else if(useFree){text=s.freeText.trim();f['c_'+tn.id]=0;f['free_'+tn.id]=text;o=null;
+      if(opt.aiAssess){g=opt.aiAssess.g;why=opt.aiAssess.why;betterText=opt.aiAssess.better||bestO.t;}
+      else{const n=kw(text,tn.k);g=n>=2?2:n>=1?1:0;why=(g===2?'You covered the key points. ':g===1?'You touched one key point. ':'Your answer missed the key points. ')+'Model answer: '+bestO.t;}}
+    else{text=o.t;f['c_'+tn.id]=idx;if(o.f)f[o.f]=true;g=o.g;why=o.why||'';
+      if(o.needD1&&!f.d1){g=1;why+=' But D-1 was never summoned, so that point has no proof on record.';}
+      if(tn.step==='verdict'){const corr=C.correct(s.flags);f.v=o.v;const ord=['full','part','acq'];const d=Math.abs(ord.indexOf(o.v)-ord.indexOf(corr));g=d===0?2:d===1?1:0;why=C.explain[corr];bestO=tn.o.find(x=>x.v===corr);if(!opt.byAi&&s.reasons.trim())f.reasons=s.reasons.trim();}
+      if(tn.step==='sentence')f.sentence=text;}
+    const scored=!opt.byAi&&tn.role!=='witness'&&g!==null&&(s.remoteBy?true:(tn.role===s.myRole&&!s.actingFor));const lim=this.lim();const by=s.remoteBy||this.myId();
+    if(scored)moves.push({by,c:o?o.c||'rsn':(tn.step==='args'?'law':tn.step==='cross'||tn.step==='chief'?'wit':'evi'),g,why,best:betterText||(bestO?bestO.t:''),text,prompt:tn.p,timed:!!lim,onTime:!opt.timedOut&&(!lim||s.timeLeft/lim>0.1)});
+    const entry={kind:tn.step==='ruling'||tn.step==='verdict'||tn.step==='sentence'||tn.step==='charges'?'order':'talk',role:tn.role,who:this.nameFor(tn.role,tn),text:(opt.timedOut?(s.lang==='hi'?'[समय समाप्त] ':'[Time ran out] '):'')+text};
+    log.push(entry);
+    if(tn.step==='plea'&&f.guilty)log.push({kind:'clerk',text:s.lang==='hi'?'अभियुक्त ने दोष स्वीकार किया। अदालत सीधे फ़ैसले पर।':'The accused pleads guilty. The court moves straight to judgment.'});
+    const fb=scored&&LV[s.level].feedback?{g,why,better:g<2?(betterText||(bestO?bestO.t:'')):''}:null;
+    let pendingAdj=null;
+    if(o&&o.adj){const date=DATES[s.adjCount%DATES.length];pendingAdj={date,note:s.lang==='hi'?'समन जारी। अगली तारीख पर D-1 रिकॉर्ड पर होगा।':'Summons issued. On the next date, D-1 is placed on record as evidence.'};log.push({kind:'clerk',text:(s.lang==='hi'?'स्थगित — अगली तारीख ':'Adjourned to ')+date});}
+    this.tok++;
+    this.setState({flags:f,log,moves,phase:'showing',cur:entry,fb,fbFor:by,laterNote:scored&&!LV[s.level].feedback,nextIdx:s.turnIdx+1,pendingAdj,adjCount:pendingAdj?s.adjCount+1:s.adjCount});
+    if(opt.byAi&&this.props.autoAdvance){const id=this.tok;const ms=Math.max(4500,text.split(' ').length*320);this.to=setTimeout(()=>{if(this.tok===id&&this.state.phase==='showing')this.next();},ms);}}
+  // ---------- AI live mode ----------
+  async genAi(){const s=this.state;if(s.aiGen==='loading'||s.netRole==='guest')return;if(!this.aiOK()){this.setState({aiGen:'error',aiErr:this.noAiMsg()});return;}
+    this.setState({aiGen:'loading',aiErr:''});const lvl=s.level,r=Math.random();
+    const truth=lvl===1?(r<0.7?'full':'part'):lvl===2?(r<0.4?'full':r<0.75?'part':'acq'):(r<0.3?'full':r<0.5?'part':'acq');
+    const pool=AITYPES.filter(a=>a.en!=='Surprise me');const type=s.aiType==='Surprise me'?pool[Math.floor(Math.random()*pool.length)].en:s.aiType;
+    let seen=[];try{seen=JSON.parse(localStorage.getItem('adalat-seen-cases')||'[]');}catch(e){}
+    try{const c=await AdalatAI.genCase({type,level:lvl,lang:s.lang,truth,avoid:seen.slice(-15),onStep:n=>this.setState({genStep:n})});
+      try{seen.push({t:c.title,a:c.names&&c.names.accused,o:c.oneLine});localStorage.setItem('adalat-seen-cases',JSON.stringify(seen.slice(-30)));}catch(e){}
+      c.type=type;c.level=lvl;c.truth=c.truth&&c.truth.v?c.truth:{v:truth,reason:''};c.correct=f=>f.guilty?'full':c.truth.v;c.explain={full:c.truth.reason,part:c.truth.reason,acq:c.truth.reason};
+      c.story=c.story||[];c.timeline=c.timeline||[];c.exhibits=(c.exhibits||[]).map(x=>Array.isArray(x)?x:[x.id,x.name,x.plain]);c.laws=c.laws||[];
+      c.witnesses=(c.witnesses||[]).slice(0,3);c.people=c.people&&c.people.length?c.people:c.witnesses.map(w=>[w.name,w.id+' · '+w.role,'']);
+      c.names=Object.assign({judge:'The Magistrate',pros:'APP',def:'Defence counsel',accused:'The accused'},c.names||{});c.lesson=c.lesson||{title:'',points:[]};c.turns=[];
+      this.setState({aiCase:c,mode:'ai',aiLevel:lvl,aiGen:'idle',screen:'brief',review:''});}
+    catch(e){this.setState({aiGen:'error',aiErr:e.message==='NO_AI'||/AI_SERVER/.test(e.message)?this.noAiMsg():(s.lang==='hi'?'केस तैयार नहीं हो सका। फिर प्रयास करें।':'The case file could not be prepared. Please try again.')});}}
+  startAi(){const C=this.C;const ws=C.witnesses||[];const steps=[{step:'call',role:'clerk',ph:0},{step:'filing',role:'pros',ph:0},{step:'charges',role:'judge',ph:1},{step:'plea',role:'accused',ph:1}];
+    ws.filter(w=>w.side!=='def').forEach(w=>{steps.push({step:'oath',role:'clerk',ph:2,w},{step:'chief',role:'pros',ph:2,w},{step:'cross',role:'def',ph:2,w});});
+    ws.filter(w=>w.side==='def').forEach(w=>{steps.push({step:'oath',role:'clerk',ph:3,w},{step:'chief',role:'def',ph:3,w},{step:'cross',role:'pros',ph:3,w});});
+    steps.push({step:'args',role:'pros',ph:4},{step:'args',role:'def',ph:4},{step:'verdict',role:'judge',ph:5});
+    this.setState({screen:'court',tab:'record',steps,review:'',ph:-1,lastWitness:null,overlay:null,pendingAdj:null},()=>this.aiEnter(0,{log:[{kind:'clerk',text:this.state.lang==='hi'?'अदालत की कार्यवाही आरंभ':'Court is in session'}],flags:{},moves:[]}));}
+  aiEnter(i,patch){const st=this.state.steps;const f=patch.flags;clearTimeout(this.to);this.afterShow=null;this.tok++;
+    while(i<st.length&&f.guilty&&st[i].ph>=2&&st[i].step!=='verdict')i++;
+    if(i>=st.length){this.finish(patch);return;}
+    const S=st[i];const log=[...patch.log];if(S.ph!==this.state.ph)log.push({kind:'clerk',text:'— '+PH[this.state.lang][S.ph]+' —'});
+    const base={...patch,turnIdx:i,ph:S.ph,nextIdx:i+1,qn:0,qPhase:'ask',suggestions:[],sel:null,freeText:'',reasons:'',hidden:[],fb:null,actingFor:null,remoteBy:null,thinkMsg:''};
+    if(S.role==='clerk'){const e=S.step==='call'?this.rollCall():this.oath(S.w.id+' '+S.w.name);log.push(e);this.setState({...base,log,phase:'showing',cur:e,lastWitness:S.w?S.w.id+' '+S.w.name:this.state.lastWitness});return;}
+    const human=this.isHuman(S.role);
+    this.setState({...base,log,cur:null,freeMode:S.step!=='plea'&&S.step!=='verdict',timeLeft:this.lim(),phase:!human?'thinking':S.role!==this.state.myRole?'handoff':'acting'},()=>{if(!human)this.aiSpeak();});}
+  async aiSpeak(){const s=this.state,S=s.steps[s.turnIdx],C=this.C;const id=++this.tok;this.retryFn=()=>this.aiSpeak();
+    this.setState({phase:'thinking',thinkMsg:''});
+    try{let text,kind='talk';const f={...s.flags};
+      if(S.step==='plea'){await new Promise(r=>setTimeout(r,1800));text=s.lang==='hi'?'माननीय, मैं निर्दोष हूँ। मुकदमा चलाया जाए।':'Not guilty, Your Honour. I claim trial.';}
+      else if(S.step==='verdict'){const r=await AdalatAI.verdict({c:C,log:s.log,lang:s.lang});f.v=r.v;f.sentence=r.sentence||'';f.judgment=r.judgment;text=r.judgment;kind='order';}
+      else{text=await AdalatAI.speak({c:C,role:S.role,step:S.step,w:S.w,log:s.log,lang:s.lang,skill:this.props.aiSkill,qn:s.qn});if(S.step==='charges')kind='order';}
+      if(this.tok!==id)return;
+      const e={kind,role:S.role,who:this.nameFor(S.role),text};
+      this.afterShow=(S.step==='chief'||S.step==='cross')?()=>this.witnessTurn(text):null;
+      this.setState({flags:f,log:[...this.state.log,e],phase:'showing',cur:e,fb:null});}
+    catch(err){if(this.tok!==id)return;this.setState({phase:'aierror',aiErr:this.noAiMsg()});}}
+  async witnessTurn(q){const s=this.state,S=s.steps[s.turnIdx],C=this.C;this.lastQ=q;
+    if(this.isHuman('witness')){this.setState({qPhase:'answer',phase:s.myRole==='witness'?'acting':'handoff',freeMode:true,freeText:'',suggestions:[],timeLeft:this.lim(),actingFor:null,remoteBy:null});return;}
+    const id=++this.tok;this.retryFn=()=>this.witnessTurn(q);this.setState({qPhase:'answer',phase:'thinking',thinkMsg:''});
+    try{const a=await AdalatAI.witness({c:C,w:S.w,q,log:s.log,lang:s.lang});if(this.tok!==id)return;
+      const e={kind:'talk',role:'witness',who:S.w.id+' '+S.w.name,text:a};this.afterShow=()=>this.afterAnswer();
+      this.setState({log:[...this.state.log,e],phase:'showing',cur:e,fb:null});}
+    catch(err){if(this.tok!==id)return;this.setState({phase:'aierror',aiErr:this.noAiMsg()});}}
+  afterAnswer(){const s=this.state,S=s.steps[s.turnIdx];const qn=s.qn+1;const patch={log:s.log,flags:s.flags,moves:s.moves};
+    if(this.isHuman(S.role)){if(qn>=4)return this.aiEnter(s.turnIdx+1,patch);
+      this.setState({qn,qPhase:'ask',phase:S.role===s.myRole?'acting':'handoff',freeMode:true,freeText:'',suggestions:[],timeLeft:this.lim(),actingFor:null,remoteBy:null});}
+    else{if(qn>=2)return this.aiEnter(s.turnIdx+1,patch);this.setState({qn,qPhase:'ask'},()=>this.aiSpeak());}}
+  async aiSubmit(timedOut){const s=this.state,S=s.steps[s.turnIdx],C=this.C,L=s.lang;const scored=s.remoteBy?true:!s.actingFor;const by=s.remoteBy||this.myId();const lim=this.lim();const tn=this.curTurn();
+    this.stopMic&&this.stopMic();
+    if(s.qPhase==='answer'){const e={kind:'talk',role:'witness',who:S.w.id+' '+S.w.name,text:s.freeText.trim()||'…'};this.afterShow=()=>this.afterAnswer();this.setState({log:[...s.log,e],phase:'showing',cur:e,fb:null});return;}
+    if(S.step==='plea'){const o=tn.o[s.sel??0];const f={...s.flags};if(o.f)f.guilty=true;const e={kind:'talk',role:'accused',who:this.nameFor('accused'),text:o.t};const log=[...s.log,e];
+      if(f.guilty)log.push({kind:'clerk',text:L==='hi'?'अभियुक्त ने दोष स्वीकार किया। अदालत सीधे फ़ैसले पर।':'The accused pleads guilty. The court moves straight to judgment.'});
+      this.setState({flags:f,log,phase:'showing',cur:e,fb:null});return;}
+    if(S.step==='verdict'){const o=tn.o[s.sel??2];const corr=C.correct(s.flags);const ord=['full','part','acq'];const d=Math.abs(ord.indexOf(o.v)-ord.indexOf(corr));const g=d===0?2:d===1?1:0;
+      const f={...s.flags,v:o.v,reasons:s.reasons.trim()};const e={kind:'order',role:'judge',who:this.nameFor('judge'),text:o.t+(f.reasons?' — '+f.reasons:'')};
+      const moves=[...s.moves];if(scored)moves.push({by,c:'rsn',g,why:C.truth.reason,best:C.verdicts[corr],text:o.t,prompt:tn.p,timed:!!lim,onTime:!timedOut});
+      this.setState({flags:f,moves,fbFor:by,log:[...s.log,e],phase:'showing',cur:e,fb:scored&&LV[this.lvl()].feedback?{g,why:C.truth.reason,better:g<2?C.verdicts[corr]:''}:null,laterNote:scored&&!LV[this.lvl()].feedback});return;}
+    const text=s.freeText.trim();if(!text)return;
+    const id=++this.tok;this.setState({phase:'thinking',thinkMsg:L==='hi'?'अदालत आपकी बात पर विचार कर रही है…':'The court is considering your words…'});
+    let r;try{r=await AdalatAI.assess({c:C,role:S.role,step:S.step,w:S.w,text,log:s.log,lang:L});}catch(e){r={g:text.length>60?1:0,c:'law',why:L==='hi'?'AI प्रतिक्रिया उपलब्ध नहीं।':'AI feedback unavailable for this move.',better:'',improper:null};}
+    if(this.tok!==id)return;
+    const st=this.state;const e={kind:S.step==='charges'?'order':'talk',role:S.role,who:this.nameFor(S.role),text};const log=[...st.log,e];const moves=[...st.moves];
+    if(scored)moves.push({by,c:r.c||'law',g:r.g,why:r.why,best:r.better||text,text,prompt:tn.p,timed:!!lim,onTime:!timedOut&&(!lim||st.timeLeft/lim>0.1)});
+    const fb=scored&&LV[this.lvl()].feedback?{g:r.g,why:r.why,better:r.g<2?r.better:''}:null;const isQ=S.step==='chief'||S.step==='cross';
+    if(isQ&&r.improper){const opp=S.role==='pros'?'def':'pros';const why={leading:L==='hi'?'यह सूचक प्रश्न है':'leading question',insulting:L==='hi'?'प्रश्न गवाह का अपमान करता है':'the question insults the witness',irrelevant:L==='hi'?'प्रश्न अप्रासंगिक है':'the question is irrelevant'}[r.improper]||r.improper;
+      const ob={kind:'talk',role:opp,who:this.nameFor(opp),text:(L==='hi'?'आपत्ति, माननीय — ':'Objection, Your Honour — ')+why+'.'};const ru={kind:'order',role:'judge',who:this.nameFor('judge'),text:L==='hi'?'आपत्ति स्वीकार। वकील प्रश्न दोबारा पूछें।':'Sustained. Counsel will rephrase the question.'};
+      log.push(ob,ru);this.afterShow=()=>this.setState({phase:S.role===this.state.myRole?'acting':'handoff',freeText:'',suggestions:[],timeLeft:this.lim(),actingFor:null,remoteBy:null});
+      this.setState({log,moves,fbFor:by,phase:'showing',cur:{...ru,text:`${ob.who}: “${ob.text}” — ${ru.text}`},fb,laterNote:scored&&!fb});return;}
+    this.afterShow=isQ?()=>this.witnessTurn(text):null;
+    this.setState({log,moves,fbFor:by,phase:'showing',cur:e,fb,laterNote:scored&&!fb});}
+  async suggest(){const s=this.state,S=s.steps[s.turnIdx];if(s.sugBusy)return;this.setState({sugBusy:true});
+    try{const o=await AdalatAI.suggest({c:this.C,role:S.role,step:S.step,w:S.w,log:s.log,lang:s.lang,qn:s.qn});this.setState({suggestions:o,sugBusy:false,sel:null});}catch(e){this.setState({sugBusy:false});}}
+  toggleMic(){if(this.state.listening){this.stopMic&&this.stopMic();this.setState({listening:false});return;}
+    const stop=AdalatFX.mic(this.state.lang,txt=>this.setState(s=>({freeText:(s.freeText?s.freeText+' ':'')+txt,freeMode:true})),()=>this.setState({listening:false}));
+    if(stop){this.stopMic=()=>{stop();this.stopMic=null;};this.setState({listening:true});}}
+  // ---------- online multiplayer ----------
+  myId(){return window.AdalatNet?AdalatNet.id:'local';}
+  peerFor(r){const s=this.state;if(!s.netRole||!r)return null;return s.peers.find(p=>p.id!==this.myId()&&p.role===r)||null;}
+  seqKey(s){return [s.turnIdx,s.log.length,s.qn,s.qPhase,s.phase].join('-');}
+  netSync(ps){const s=this.state;if(s.netRole!=='host'||!this.net)return;
+    if(ps.aiCase!==s.aiCase&&s.aiCase)this.net.send('case',s.aiCase);
+    if(ps.phase!==s.phase||ps.cur!==s.cur||ps.turnIdx!==s.turnIdx||ps.qn!==s.qn||ps.qPhase!==s.qPhase){if(s.ready.length)this.setState({ready:[]});}
+    const ch=SYNC.filter(k=>ps[k]!==s[k]);if(!ch.length)return;
+    if(ch.length===1&&ch[0]==='timeLeft')this.net.send('tick',{t:s.timeLeft,v:this.ver||0});else this.queueBroadcast();}
+  queueBroadcast(){if(this.bq)return;this.bq=setTimeout(()=>{this.bq=null;this.broadcastState();},120);}
+  broadcastState(){const s=this.state;if(!this.net)return;const p={};SYNC.forEach(k=>p[k]=s[k]);const S=s.steps[s.turnIdx];this.ver=(this.ver||0)+1;
+    p.v=this.ver;p.afterPending=!!this.afterShow;p.lastQ=this.lastQ;p.freeDef=s.mode==='ai'?(s.qPhase==='answer'||!!(S&&!['plea','verdict'].includes(S.step))):false;this.net.send('state',p);}
+  humanIds(){const s=this.state;return s.peers.map(p=>p.id);}
+  markReady(by,key){const s=this.state;if(s.phase!=='showing'||key!==this.seqKey(s))return;const ready=s.ready.includes(by)?s.ready:[...s.ready,by];
+    const all=this.humanIds();if(all.every(i=>ready.includes(i)))this.next();else this.setState({ready});}
+  broadcastAll(){if(!this.net)return;if(this.state.aiCase)this.net.send('case',this.state.aiCase);this.broadcastState();}
+  applySnap(p){const s=this.state;if(p.v&&p.v<this.lastV&&this.lastV-p.v<6)return;this.lastV=p.v||0;this.lastSnapAt=Date.now();const reset=p.turnIdx!==s.turnIdx||p.qn!==s.qn||p.qPhase!==s.qPhase||p.phase!==s.phase||p.screen!==s.screen;this.lastQ=p.lastQ||'';
+    this.setState({...p,...(reset?{suggestions:[],sel:null,freeText:'',reasons:'',hidden:[],freeMode:!!p.freeDef,thinkMsg:''}:{})});}
+  applyRemoteMove(p){const s=this.state;if(s.screen!=='court'||!['handoff','acting'].includes(s.phase)||p.key!==this.seqKey(s))return;const tn=this.curTurn();const peer=s.peers.find(x=>x.id===p.by);if(!tn||!peer||peer.role!==tn.role||tn.role===s.myRole)return;
+    this.setState({sel:p.sel,freeText:p.freeText||'',reasons:p.reasons||'',freeMode:!!p.freeMode,actingFor:null,remoteBy:p.by,phase:'acting'},()=>this.doSubmit());}
+  doSubmit(){const s=this.state;if(s.mode==='ai')return this.aiSubmit(false);if(s.freeMode&&s.freeText.trim())return this.scriptFreeSubmit();this.resolve(s.sel??0);}
+  connect(room,role){const s=this.state,L=s.lang;
+    if(!AdalatNet.configured())return this.setState({netErr:L==='hi'?'पहले ऑनलाइन सेटअप पूरा करें।':'Finish the online setup first.'});
+    if(!AdalatNet.libReady())return this.setState({netErr:L==='hi'?'ऑनलाइन सेवा लोड नहीं हुई। इंटरनेट जाँचें।':'The online service did not load. Check your internet.'});
+    this.net&&this.net.leave();
+    try{this.net=AdalatNet.join({room,me:{id:this.myId(),name:s.myName||'Player',role:s.myRole,host:role==='host'},on:{
+      peers:pl=>{this.setState({peers:pl},()=>this.fixRole());},
+      ready:()=>{this.setState({netStatus:'live'});if(role==='guest')this.net.send('hello',{});else this.broadcastAll();},
+      closed:()=>this.setState({netStatus:''}),
+      error:()=>this.setState({netStatus:'',netErr:L==='hi'?'रूम से जुड़ नहीं पाए। सेटअप और इंटरनेट जाँचें।':'Could not connect to the room. Check the setup and your internet.'}),
+      hello:()=>{if(this.state.netRole==='host')this.broadcastAll();},
+      state:p=>{if(this.state.netRole==='guest')this.applySnap(p);},
+      case:c=>{if(this.state.netRole==='guest'){c.correct=f=>f.guilty?'full':c.truth.v;this.setState({aiCase:c});}},
+      tick:p=>{if(this.state.netRole==='guest'){this.setState({timeLeft:p.t});if(p.v&&p.v!==this.lastV)this.net.send('hello',{});}},
+      move:p=>{if(this.state.netRole==='host')this.applyRemoteMove(p);},
+      next:p=>{if(this.state.netRole==='host')this.markReady(p.by,p.key);},
+      resume:()=>{if(this.state.netRole==='host'&&this.state.overlay)this.resume();}}});
+      this.setState({netRole:role,room,netErr:'',netStatus:'connecting',peers:[],ready:[]});this.lastV=0;this.ver=0;
+      clearInterval(this.hb);this.hb=setInterval(()=>{const st=this.state;if(!this.net)return;if(st.netRole==='host')this.broadcastState();},4000);
+}
+    catch(e){this.setState({netErr:L==='hi'?'रूम से जुड़ नहीं पाए।':'Could not connect to the room.'});}}
+  fixRole(){const s=this.state;if(!s.netRole||s.screen==='court')return;const mine=s.peers.filter(p=>p.id!==this.myId()&&p.role===s.myRole);if(!mine.length)return;
+    const meHost=s.netRole==='host';const clash=mine.some(p=>p.host||(!meHost&&p.id<this.myId()));if(!clash&&!meHost)return;if(meHost&&!mine.some(p=>p.host))return;
+    const free=['def','pros','judge','accused','witness'].find(r=>!s.peers.some(p=>p.id!==this.myId()&&p.role===r));if(free){this.setState({myRole:free});this.net&&this.net.update({role:free});}}
+  leaveRoom(){clearInterval(this.hb);this.net&&this.net.leave();this.net=null;this.setState({netRole:null,room:'',peers:[],netStatus:''});}
+  // ---------- shared ----------
+  next(){const s=this.state;if(s.ready.length)this.setState({ready:[]});if(this.afterShow){const fn=this.afterShow;this.afterShow=null;fn();return;}
+    if(s.pendingAdj){this.setState({overlay:{...s.pendingAdj,next:s.nextIdx},pendingAdj:null});return;}
+    const patch={flags:s.flags,log:s.log,moves:s.moves};if(s.mode==='ai')this.aiEnter(s.nextIdx,patch);else this.enterTurn(s.nextIdx,patch);}
+  resume(){const ov=this.state.overlay;if(ov.next!==undefined){this.setState({overlay:null});this.enterTurn(ov.next,{flags:this.state.flags,log:this.state.log,moves:this.state.moves});}else this.setState({overlay:null,timeLeft:this.lim()});}
+  finish(patch){const s=this.state;const moves=patch.moves.filter(m=>(m.by||this.myId())===this.myId());const n=moves.length;const pct=n?Math.round(moves.reduce((a,m)=>a+m.g,0)/(2*n)*100):null;
+    this.setState({...patch,screen:'result',phase:'idle'});
+    if(s.mode==='script'&&pct!==null&&s.myRole!=='witness'){const p={...s.progress,passed:{...s.progress.passed},best:{...s.progress.best}};p.best[s.level]=Math.max(p.best[s.level]||0,pct);if(pct>=60)p.passed[s.level]=true;this.saveProg(p);}}
+  requestAdj(ri){const s=this.state;const tn=this.T[s.turnIdx];const r=tn.role;const L=s.lang;const R=this.adjReasons();const granted=ri<2;
+    const log=[...s.log,{kind:'talk',role:r,who:this.nameFor(r),text:(L==='hi'?'स्थगन का अनुरोध: ':'Requests adjournment: ')+R[ri]},
+      {kind:'order',role:'judge',who:this.nameFor('judge'),text:granted?(L==='hi'?'स्थगन स्वीकार, कारण दर्ज।':'Granted, for reasons recorded.'):(L==='hi'?'अस्वीकार — तैयारी की कमी स्थगन का आधार नहीं।':'Refused. Not being prepared is not a valid reason; the trial continues.')}];
+    const adjLeft={...s.adjLeft,[r]:s.adjLeft[r]-1};
+    if(!granted){this.setState({log,adjLeft,adjModal:false});return;}
+    const date=DATES[s.adjCount%DATES.length];
+    this.setState({log,adjLeft,adjModal:false,adjCount:s.adjCount+1,overlay:{date,note:L==='hi'?'सुनवाई अगली तारीख पर इसी चरण से, नए समय के साथ।':'The hearing resumes at this same step, with a fresh clock.'}});}
+  adjReasons(){return this.state.lang==='hi'?['नए प्रस्तुत साक्ष्य का अध्ययन करने हेतु','अतिरिक्त गवाह बुलाने हेतु','मैं तैयार नहीं हूँ']:['To study evidence that was just produced','To call an additional witness','I am not prepared'];}
+  async getReview(){if(this.state.reviewing)return;this.setState({reviewing:true});const s=this.state;
+    try{const r=await AdalatAI.review({c:this.C,role:s.myRole,log:s.log,lang:s.lang});this.setState({review:r,reviewing:false});}
+    catch(e){this.setState({review:this.noAiMsg(),reviewing:false});}}
+  renderVals(){
+    const s=this.state,L=s.lang,t=STR[L];
+    const base={t,enBg:L==='en'?'#6D28D9':'#FFFFFF',enFg:L==='en'?'#FFFFFF':'#6D28D9',hiBg:L==='hi'?'#6D28D9':'#FFFFFF',hiFg:L==='hi'?'#FFFFFF':'#6D28D9',
+      setEn:()=>this.setState({lang:'en'}),setHi:()=>this.setState({lang:'hi'}),
+      voiceLabel:(s.voice?(L==='hi'?'आवाज़: चालू':'Voice: on'):(L==='hi'?'आवाज़: बंद':'Voice: off')),voiceBg:s.voice?'#6D28D9':'#FFFFFF',voiceFg:s.voice?'#FFFFFF':'#6D28D9',
+      toggleVoice:()=>{if(s.voice&&window.AdalatFX)AdalatFX.stop();this.setState({voice:!s.voice});},
+      goHome:()=>{this.tok++;clearTimeout(this.to);this.afterShow=null;window.AdalatFX&&AdalatFX.stop();this.setState({screen:'home',phase:'idle',overlay:null,adjModal:false,docView:null,mode:'script',homeStep:'title'});}};
+    if(!window.ADALAT||!window.AdalatAI||!window.AdalatNet)return {...base,loading:true,headerSub:''};
+    if(s.mode==='ai'&&!s.aiCase)return {...base,loading:true,headerSub:''};
+    const D=window.ADALAT,C=this.C,tn=s.screen==='court'?this.curTurn():null;const roleName=r=>RN[r][L];const isAi=s.mode==='ai';const lv=this.lvl();const guest=s.netRole==='guest';const me=this.myId();const myTurnG=guest&&!!tn&&s.phase==='handoff'&&tn.role===s.myRole;const starsFor=p=>p==null?0:p>=85?3:p>=60?2:p>0?1:0;const starStr=n=>'★★★'.slice(0,n)+'☆☆☆'.slice(0,3-n);
+    const unlocked=n=>n===1||s.progress.all||!!s.progress.passed[n-1];
+    const levelCards=D.CASES.map(c=>{const n=c.level,on=n===s.level,un=unlocked(n);const lim=LV[n].timer;
+      return {num:n,stars:starStr(starsFor(s.progress.best[n])),nodeBg:s.progress.passed[n]?'#6D28D9':un?'#FFFFFF':'#EDE9FE',nodeFg:s.progress.passed[n]?'#FFFFFF':un?'#6D28D9':'#A5A3C9',nodeBd:un?'#6D28D9':'#C9BFFF',nodeTxt:s.progress.passed[n]?'✓':String(n),notLast:n<D.CASES.length,go:()=>{if(un)this.setState({level:n,homeStep:'roles',flowMode:'level'});},tag:(L==='hi'?'स्तर ':'Level ')+n,name:c.levelName[L],learn:c.learn[L],type:c.type,title:c.title,one:c.oneLine,color:LVCOL[n],
+        rules:lim?`${lim/60} ${t.timed} · ${LV[n].feedback?t.tipsOn:t.tipsOff}`:t.noTimer,
+        status:s.progress.passed[n]?`${t.passed} · ${s.progress.best[n]}%`:un?t.start:t.locked,stColor:s.progress.passed[n]?'#6D28D9':un?'#6D28D9':'#5B5B8A',
+        bd:on?LVCOL[n]:'#E4DEFF',sh:on?'0 8px 22px rgba(109,40,217,0.18)':'none',op:un?1:0.55,pick:()=>{if(un)this.setState({level:n});}};});
+    const aiTypes=AITYPES.map(a=>{const on=a.en===s.aiType;return {name:a[L],bd:on?'#6D28D9':'#C9BFFF',bg:on?'#6D28D9':'#FFFFFF',fg:on?'#FFFFFF':'#6D28D9',pick:()=>this.setState({aiType:a.en})};});
+    const roleCards=ROLE_ORDER.map(r=>{const on=r===s.myRole;return {name:roleName(r),desc:RD[r][L],color:COL[r],ini:roleName(r)[0],fill:on?'#6D28D9':'#FFFFFF',ink:on?'#FFFFFF':'#6D28D9',dot:on?'#6D28D9':'#FFFFFF',bd:on?COL[r]:'#E4DEFF',bg:on?'#FFFFFF':'#FFFFFF',op:this.peerFor(r)&&!on?0.5:1,takenBy:this.peerFor(r)?(L==='hi'?'चुना: ':'Taken by ')+this.peerFor(r).name:'',pick:()=>{if(this.peerFor(r))return;this.setState({myRole:r});this.net&&this.net.update({role:r});}};});
+    const lvC=D.CASES[s.level-1];
+    const seatRows=ROLE_ORDER.filter(r=>r!==s.myRole).map(r=>{const h=s.seats[r]==='human';const pr=this.peerFor(r);return {name:roleName(r),status:pr?(pr.name+(L==='hi'?' · ऑनलाइन':' · online')):h?(L==='hi'?'रूम कोड से जुड़ेंगे':'Joins with the room code'):(r==='witness'?(L==='hi'?'AI गवाह':'AI witnesses'):(L==='hi'?'AI · ':'AI · ')+lvC.names[r]),
+      hBg:h?'#6D28D9':'transparent',hFg:h?'#FFFFFF':'#6D28D9',aBg:h?'transparent':'#6D28D9',aFg:h?'#6D28D9':'#FFFFFF',
+      setHuman:()=>this.setState({seats:{...s.seats,[r]:'human'}}),setAi:()=>this.setState({seats:{...s.seats,[r]:'ai'}})};});
+    const exhibitList=C.exhibits.map(x=>{const on=!x[3]||s.flags.d1;const status=on?(L==='hi'?'रिकॉर्ड पर':'On record'):(L==='hi'?'मंगाया नहीं':'Not summoned');
+      return {id:x[0],name:x[1],plain:x[2],status,stColor:on?'#6D28D9':'#6D28D9',open:()=>this.setState({docView:{id:x[0],name:x[1],plain:x[2],status}})};});
+    const dv=s.docView;const doc=dv?{...dv,hasBody:/^P-1$/.test(dv.id)&&!!C.story[0],body:C.story.slice(0,2).join(' ')}:{id:'',name:'',plain:'',status:'',hasBody:false,body:''};
+    const gloss=D.GLOSS[L].map(([w,d])=>({w,d}));
+    const phases=PH[L].map((p,i)=>({label:(i<s.ph?'✓ ':'')+p,bd:i===s.ph?'#6D28D9':'transparent',fg:i===s.ph?'#6D28D9':i<s.ph?'#3F3D6B':'#A5A3C9'}));
+    const tabs=[['record',t.record],['case',t.caseTab],['law',t.lawTab]].map(([k,l])=>({label:l,bd:s.tab===k?'#6D28D9':'transparent',bg:s.tab===k?'#FFFFFF':'transparent',fg:s.tab===k?'#6D28D9':'#5B5B8A',go:()=>this.setState({tab:k})}));
+    const logView=s.log.map(e=>({isClerk:e.kind==='clerk',isTalk:e.kind!=='clerk',text:e.text,who:e.role==='clerk'?'':e.who,tag:e.kind==='order'?(L==='hi'?'आदेश':'ORDER'):(e.role?RN[e.role][L].toUpperCase():''),color:e.kind==='order'?'#6D28D9':COL[e.role]||'#5B5B8A'}));
+    const speaker=s.phase==='showing'&&s.cur?s.cur.role:tn&&['thinking','acting','handoff'].includes(s.phase)?tn.role:null;
+    const seat=r=>{const act=speaker===r;const _nm=r==='witness'?(s.lastWitness||''):this.nameFor(r);const ini=r==='witness'&&!s.lastWitness?'W':(_nm==='You'||_nm==='आप')?(L==='hi'?'आप':'YOU'):(_nm||'?').replace(/^(PW\d+|DW\d+)\s*/,'').replace(/^(Shri|Smt\.?|Adv\.|SI|HC|Insp\.)\s*/,'').split(/[\s·,]+/).filter(w=>/^[A-Za-z]/.test(w)).slice(0,2).map(w=>w[0]).join('').toUpperCase()||RN[r][L][0];const nm=r==='witness'?(s.lastWitness||(L==='hi'?'गवाह कटघरा':'Witness box')):this.nameFor(r);return {name:nm,act,bOp:act?1:0,ini,bg:act?'#6D28D9':'#FFFFFF',fg:act?'#FFFFFF':'#6D28D9',tf:act?'scale(1.12)':'scale(1)'};};
+    const stage={judge:seat('judge'),pros:seat('pros'),def:seat('def'),accused:seat('accused'),witness:seat('witness')};
+    const stepKey=tn?(tn.step==='call'||tn.step==='oath'?null:tn.step):null;const step=stepKey&&D.STEPS[stepKey];const lvCfg=LV[lv];
+    const opts=tn?tn.o:[];const optsSug=opts.length>0&&!!opts[0].sug;
+    const optionView=opts.map((o,i)=>{const on=s.sel===i,hid=s.hidden.includes(i);return {t:o.t,key:'ABCDE'[i],keyBg:on?'#FFFFFF':'#6D28D9',keyFg:on?'#6D28D9':'#FFFFFF',dot:on?'#6D28D9':'#FFFFFF',bd:on?'#6D28D9':'#C9BFFF',bg:on?'#6D28D9':'#FFFFFF',fg:on?'#FFFFFF':'#6D28D9',op:hid?0.4:1,td:hid?'line-through':'none',
+      pick:()=>{if(hid)return;if(o.sug)this.setState({sel:i,freeText:o.t,freeMode:true});else this.setState({sel:i,freeMode:isAi?s.freeMode:false});}};});
+    const needsOpt=tn&&(tn.step==='plea'||tn.step==='verdict'||(!isAi&&!s.freeMode));
+    const canSubmit=needsOpt?s.sel!==null:s.freeText.trim().length>0;
+    const lim=this.lim();const pct=lim?s.timeLeft/lim:1;
+    const advRole=!isAi&&tn&&(tn.role==='pros'||tn.role==='def')?tn.role:null;
+    const fbMap={2:[t.strong,'#EDE9FE','#6D28D9'],1:[t.okay,'#EDE9FE','#6D28D9'],0:[t.weak,'#EDE9FE','#6D28D9']};
+    const fb=s.fb?{label:fbMap[s.fb.g][0],bg:fbMap[s.fb.g][1],fg:fbMap[s.fb.g][2],why:s.fb.why,better:s.fb.better,hasBetter:!!s.fb.better,icon:['✕','–','✓'][s.fb.g],pts:'+'+(s.fb.g*50)}:{label:'',bg:'#FFF',fg:'#000',why:'',better:'',hasBetter:false,icon:'',pts:''};
+    let isLast=false;if(s.screen==='court'&&!(guest?s.afterPending:this.afterShow)&&!s.pendingAdj){if(isAi)isLast=s.nextIdx>=s.steps.length;else{const T=this.T;let i=s.nextIdx;while(i<T.length&&T[i].cond&&!T[i].cond(s.flags))i++;isLast=i>=T.length;}}
+    const corr=C.correct(s.flags);const v=s.flags.v;const moves=s.moves.filter(m=>(m.by||me)===me);const n=moves.length;
+    const myPct=n?Math.round(moves.reduce((a,m)=>a+m.g,0)/(2*n)*100):null;const pass=myPct!==null&&myPct>=60;
+    const crit=['law','evi','wit','obj','rsn'].map(c=>{const ms=moves.filter(m=>m.c===c);return ms.length?{label:CRIT[c][L],val:`${ms.reduce((a,m)=>a+m.g,0)}/${ms.length*2}`,pct:Math.round(ms.reduce((a,m)=>a+m.g,0)/(ms.length*2)*100)+'%'}:null;}).filter(Boolean);
+    const timedMoves=moves.filter(m=>m.timed);if(timedMoves.length)crit.push({label:CRIT.time[L],val:`${timedMoves.filter(m=>m.onTime).length}/${timedMoves.length}`,pct:Math.round(timedMoves.filter(m=>m.onTime).length/timedMoves.length*100)+'%'});
+    const winSide=corr==='acq'?'def':'pros';const mySide=s.myRole==='pros'?'pros':(s.myRole==='def'||s.myRole==='accused')?'def':null;
+    const winnerName=corr==='acq'?(L==='hi'?'बचाव पक्ष':'Defence'):corr==='part'?(L==='hi'?'अभियोजन (कम आरोप पर)':'Prosecution (on a lesser charge)'):(L==='hi'?'अभियोजन':'Prosecution');
+    const sideLine=!mySide?(s.myRole==='judge'?(v===corr?(L==='hi'?'आपका फ़ैसला कानून के अनुसार सही है।':'Your judgment matches the law and the evidence.'):(L==='hi'?'आपका फ़ैसला सही परिणाम से अलग है — कारण देखें।':'Your judgment differs from the correct result — see why above.')):(L==='hi'?'गवाह किसी पक्ष के नहीं होते।':'Witnesses don\'t take sides.')):
+      mySide===winSide?(L==='hi'?'आपका पक्ष जीता — क्योंकि कानून और साक्ष्य उसके साथ थे।':'Your side won — because the law and evidence supported it, not just because you argued.'):(L==='hi'?'आपका पक्ष हारा — साक्ष्य दूसरे पक्ष के साथ था। अच्छी वकालत फिर भी आपका स्कोर बढ़ाती है।':'Your side lost — the evidence favoured the other side. That happens to real lawyers too; your score still rewards good advocacy.');
+    const nextN=s.level+1;const hasNext=!guest&&!isAi&&nextN<=D.CASES.length&&(pass||s.progress.all||s.progress.passed[s.level]);
+    const thinkingLabel=s.thinkMsg||(tn?`${tn.role==='witness'?(tn.w||s.lastWitness):this.nameFor(tn.role,tn)} ${L==='hi'?'तैयारी कर रहे हैं…':'is getting ready to speak…'}`:'');
+    const netVals={needConfig:!AdalatNet.configured()&&!s.netRole,showConnect:AdalatNet.configured()&&!s.netRole,inRoom:!!s.netRole,hasNetErr:!!s.netErr,netErr:s.netErr,
+      netBadge:s.netRole?(s.netStatus==='live'?(L==='hi'?'लाइव':'Live'):(L==='hi'?'जुड़ रहे हैं…':'Connecting…')):(L==='hi'?'ऑफ़लाइन':'Offline'),netBadgeBg:s.netStatus==='live'?'#DCFCE7':'#FEF9C3',netBadgeFg:s.netStatus==='live'?'#15803D':'#6D28D9',
+      sbUrl:s.sbUrl,sbKey:s.sbKey,onSbUrl:e=>this.setState({sbUrl:e.target.value}),onSbKey:e=>this.setState({sbKey:e.target.value}),
+      saveSb:()=>{if(!s.sbUrl.trim()||!s.sbKey.trim())return;AdalatNet.save(s.sbUrl,s.sbKey);this.setState({netErr:'',sbUrl:'',sbKey:''});},
+      myName:s.myName,onName:e=>{const v=e.target.value.slice(0,24);this.setState({myName:v});try{localStorage.setItem('adalat-name',v);}catch(x){}},
+      joinCode:s.joinCode,onJoinCode:e=>this.setState({joinCode:e.target.value}),
+      createRoom:()=>this.connect(AdalatNet.code(),'host'),joinRoom:()=>{const c=s.joinCode.trim().toUpperCase();if(c)this.connect(c.startsWith('ADL-')?c:'ADL-'+c,'guest');},
+      leaveRoom:()=>this.leaveRoom(),roomCode:s.room,
+      peerList:s.peers.map(p=>({name:p.name+(p.id===me?(L==='hi'?' (आप)':' (you)'):''),role:RN[p.role]?RN[p.role][L]:'',tag:p.host?(L==='hi'?'होस्ट':'HOST'):'',color:COL[p.role]||'#5B5B8A'})),
+      hostGone:guest&&s.netStatus==='live'&&s.peers.length>0&&!s.peers.some(p=>p.host),hostGoneText:L==='hi'?'होस्ट रूम से चले गए। वे दोबारा जुड़ें तो खेल यहीं से जारी रहेगा।':'The host has left the room. The game continues from here when they rejoin.',guestBanner:guest&&s.screen==='home',guestBannerText:L==='hi'?('आप रूम '+s.room+' में '+RN[s.myRole].hi+' के रूप में हैं। होस्ट केस चुनकर सुनवाई शुरू करेंगे।'):('You are in room '+s.room+' as '+RN[s.myRole].en+'. The host picks the case and starts the hearing.'),
+      nt:L==='hi'?{online:'ऑनलाइन मल्टीप्लेयर',setup:'एक बार का सेटअप: अपने Supabase प्रोजेक्ट का URL और anon public key डालें (Settings → API)।',save:'सहेजें',name:'आपका नाम',create:'नया रूम बनाएँ',join:'जुड़ें',codePh:'रूम कोड, जैसे ADL-7K2P',room:'रूम कोड',leave:'रूम छोड़ें',forceNext:'सबकी प्रतीक्षा किए बिना आगे बढ़ें',inRoom:'इस रूम में',help:'मित्र अपने फ़ोन पर लिंक खोलें या यह कोड डालें। हर व्यक्ति ऊपर अलग भूमिका चुने; खाली सीटें AI खेलेगा।'}:{online:'Online multiplayer',setup:'One-time setup: paste your Supabase project URL and anon public key (Settings → API).',save:'Save',name:'Your name',create:'Create a room',join:'Join',codePh:'Room code, e.g. ADL-7K2P',room:'Room code',leave:'Leave room',forceNext:'Move on without waiting',inRoom:'In this room',help:'Friends open the link or enter this code on their own phone. Everyone picks a different role above; empty seats are played by AI.'}};
+    const myMovesG=s.moves.filter(m=>(m.by||me)===me);const myPts=myMovesG.reduce((a,m)=>a+m.g*50,0);
+    const totStars=D.CASES.reduce((a,c)=>a+starsFor(s.progress.best[c.level]),0);const hs=s.screen==='home'?s.homeStep:'';
+    const roleNm=RN[s.myRole][L];const lvNm=(D.CASES[s.level-1]||{}).levelName;
+    const gameVals={isTitle:hs==='title',isLevels:hs==='levels',isRoles:hs==='roles',isFriends:hs==='friends',isAiMenu:hs==='ai',
+      toTitle:()=>this.setState({homeStep:'title'}),toLevels:()=>this.setState({homeStep:'levels',flowMode:'level'}),toFriends:()=>this.setState({homeStep:'friends'}),toAi:()=>this.setState({homeStep:'ai',flowMode:'ai'}),
+      toRolesAi:()=>this.setState({homeStep:'roles',flowMode:'ai'}),rolesBack:()=>this.setState({homeStep:s.flowMode==='ai'?'ai':'levels'}),
+      rolesSub:s.flowMode==='ai'?((AITYPES.find(a=>a.en===s.aiType)||AITYPES[0])[L]+' · '+(L==='hi'?'स्तर ':'Level ')+s.level):((L==='hi'?'स्तर ':'Level ')+s.level+(lvNm?' · '+lvNm[L]:'')),
+      roleSummary:(L==='hi'?'आप: ':'You: ')+roleNm,
+      roleCta:s.flowMode==='ai'?(s.aiGen==='loading'?(L==='hi'?'केस तैयार हो रहा है…':'Preparing case…'):(L==='hi'?'केस बनाएँ':'Generate case')):(guest?(L==='hi'?'होस्ट की प्रतीक्षा':'Waiting for host'):(L==='hi'?'केस फ़ाइल खोलें':'Open case file')),
+      roleGo:()=>{if(s.flowMode==='ai')this.genAi();else if(!guest)this.setState({screen:'brief',mode:'script'});},
+      friendsCta:guest?(L==='hi'?'अपनी भूमिका चुनें':'Choose your role'):(L==='hi'?'स्तर चुनें':'Choose level'),
+      friendsGo:()=>this.setState({homeStep:guest?'roles':'levels',flowMode:'level'}),
+      statPassed:Object.keys(s.progress.passed||{}).length+'/'+D.CASES.length,statStars:totStars+'/'+(D.CASES.length*3),
+      hudLevel:isAi?'AI CASE':(L==='hi'?'स्तर ':'LEVEL ')+s.level,hudPhase:PH[L][Math.max(0,s.ph)]||'',hudSegs:PH[L].map((p,i)=>({bg:i<=s.ph?'#6D28D9':'#C9BFFF'})),hudScore:myPts+' pts',
+      resultStars:myPct===null?'':starStr(starsFor(myPct)),resultPts:myPts+' pts',resultKicker:L==='hi'?'मुकदमा समाप्त':'CASE CLOSED',
+      gt:L==='hi'?{cleared:'स्तर पास',stars:'सितारे',play:'खेलें',friends:'मित्रों के साथ खेलें',ai:'AI केस',titleNote:'कानून की पढ़ाई ज़रूरी नहीं। हर केस में पूरी कहानी और सरल भाषा में कानून।',whoPlay:'आप कौन बनेंगे?',or:'या',pickType:'केस का प्रकार चुनें',nextRole:'भूमिका चुनें'}:{cleared:'Levels cleared',stars:'Stars',play:'PLAY',friends:'Play with friends',ai:'AI case',titleNote:'No law background needed. Every case comes with the full story and the law in simple words.',whoPlay:'Who will you play?',or:'or',pickType:'Pick a case type',nextRole:'Choose role'}};
+    return {...base,loading:false,C,...netVals,...gameVals,
+      headerSub:s.screen==='home'?(L==='hi'?'खेलकर भारतीय कानून सीखें':'Learn Indian law by playing'):`${isAi?'AI Live':(L==='hi'?'स्तर ':'Level ')+s.level} · ${C.title}`,
+      isHome:s.screen==='home',isBrief:s.screen==='brief',isCourt:s.screen==='court',isResult:s.screen==='result',
+      levelCards,roleCards,seatRows,aiTypes,showUnlock:!s.progress.all,unlockAll:()=>this.saveProg({...s.progress,all:true}),
+      genAi:()=>this.genAi(),genLabel:s.aiGen==='loading'?((L==='hi'?['','1/2 · घटना लिखी जा रही है…','2/2 · साक्ष्य, कानून और गवाह…','केस फ़ाइल खुल रही है…']:['','Step 1 of 2 · Writing what happened…','Step 2 of 2 · Evidence, law & witnesses…','Opening the case file…'])[s.genStep||1]):(L==='hi'?'नया AI केस बनाएँ':'Generate a new case'),
+      genNote:(L==='hi'?'कठिनाई: स्तर ':'Difficulty: Level ')+s.level+' · '+(AITYPES.find(a=>a.en===s.aiType)||AITYPES[0])[L],genError:s.aiGen==='error',aiErr:s.aiErr,
+      shareLabel:s.copied?t.copied:t.share,share:()=>{try{navigator.clipboard.writeText(location.href.split('?')[0]+'?room='+s.room);}catch(e){}this.setState({copied:true});setTimeout(()=>this.setState({copied:false}),2000);},
+      openFileLabel:guest?(L==='hi'?'होस्ट के केस खोलने की प्रतीक्षा…':'Waiting for the host to open a case…'):(L==='hi'?'केस फ़ाइल पढ़ें — स्तर ':'Read the case file — Level ')+s.level,openFile:()=>{if(!guest)this.setState({screen:'brief',mode:'script'});},enterLabel:guest?(L==='hi'?'होस्ट के शुरू करने की प्रतीक्षा…':'Waiting for the host to start…'):t.enter,startCase:()=>this.startCase(),
+      showEnNote:L==='hi'&&!isAi,timeline:C.timeline.map(([when,what])=>({when,what})),people:C.people.map(([name,role,note])=>({name,role,note})),exhibitList,gloss,
+      showDoc:!!dv,doc,closeDoc:()=>this.setState({docView:null}),
+      myRoleName:roleName(s.myRole),myGoal:GOAL[s.myRole][L],courtShort:(C.court||'').replace(/^Court of (the )?/,'').toUpperCase(),
+      phases,stage,tabs,tabRecord:s.tab==='record',tabCase:s.tab==='case',tabLaw:s.tab==='law',logView,logRef:this.logRef,
+      showExplainer:!!step&&lvCfg.hints&&s.phase!=='idle',stepTitle:step?step[L][0]:'',stepText:step?step[L][1]:'',
+      showThinking:s.phase==='thinking',thinkingLabel,showAiError:s.phase==='aierror',retry:()=>this.retryFn&&this.retryFn(),
+      showStatement:s.phase==='showing'&&!!s.cur,cur:s.cur?{...s.cur,tag:s.cur.kind==='order'?(L==='hi'?'आदेश':'Order'):RN[s.cur.role][L],color:COL[s.cur.role]}:{tag:'',who:'',text:'',color:'#5B5B8A'},
+      replaySpeech:()=>{if(s.cur&&window.AdalatFX)AdalatFX.say(s.cur.text,L);},
+      showFeedback:!!s.fb&&(!s.netRole||s.fbFor===me),fb,showLaterNote:!!s.laterNote&&s.phase==='showing'&&(!s.netRole||s.fbFor===me),next:()=>{if(guest){this.net&&this.net.send('next',{by:me,key:this.seqKey(s)});return;}if(s.netRole==='host'&&s.peers.length>1)this.markReady(me,this.seqKey(s));else this.next();},forceNext:()=>this.next(),showForceNext:s.netRole==='host'&&s.phase==='showing'&&s.ready.length>0,nextLabel:(s.netRole&&s.peers.length>1&&s.ready.includes(me))?((L==='hi'?'दूसरों की प्रतीक्षा… ':'Waiting for others… ')+s.ready.length+'/'+s.peers.length):((isLast?t.seeResult:t.continue)+(s.netRole&&s.peers.length>1?' · '+s.ready.length+'/'+s.peers.length+(L==='hi'?' तैयार':' ready'):'')),
+      showHandoff:guest?(['handoff','acting'].includes(s.phase)&&!myTurnG):s.phase==='handoff',handoffName:tn?((this.peerFor(tn.role)?this.peerFor(tn.role).name+' · ':'')+(tn.role==='witness'?(tn.w||roleName('witness')):roleName(tn.role))):'',handoffTitle:t.waitingFor,canTakeOver:!guest,handoffHelp:guest?(L==='hi'?'उनकी चाल पूरी होते ही यहाँ दिखेगी।':'Their move will appear here as soon as they submit it.'):(tn&&this.peerFor(tn.role)?(L==='hi'?'मित्र अपने फ़ोन पर चाल चल रहे हैं। अगर वे चले गए हों, तो आप यह चाल ले सकते हैं।':'Your friend is making this move on their phone. If they dropped out, you can play it for them.'):t.handoffHelp),takeOver:()=>this.setState({phase:'acting',actingFor:tn.role,timeLeft:this.lim()}),
+      showAction:guest?myTurnG:s.phase==='acting',actorColor:tn?COL[tn.role]:'#5B5B8A',actorLabel:tn?(tn.role==='witness'?(tn.w||roleName('witness')):roleName(tn.role))+(s.actingFor?(L==='hi'?' · मित्र की चाल':' · friend\'s turn'):(L==='hi'?' · आपकी बारी':' · your turn')):'',
+      hasTimer:!!lim,timeLabel:lim?`${Math.floor(s.timeLeft/60)}:${String(s.timeLeft%60).padStart(2,'0')}`:(L==='hi'?'समय सीमा नहीं — आराम से सोचें':'No time limit — take your time'),timerPct:Math.round(pct*100)+'%',timerColor:!lim?'#6D28D9':pct<0.2?'#6D28D9':'#6D28D9',
+      turnPrompt:tn?tn.p:'',showOptions:optionView.length>0&&(isAi||!s.freeMode),optionsAreSuggestions:optsSug,optionView,
+      freeMode:s.freeMode,freeText:s.freeText,onFree:e=>this.setState({freeText:e.target.value}),freePh:tn&&tn.role==='witness'?(L==='hi'?'गवाह के रूप में अपना उत्तर लिखें या बोलें…':'Type or speak your answer as the witness…'):t.freePh,
+      freeAllowed:!isAi&&!!(tn&&(tn.free||tn.role==='witness')),freeToggleLabel:s.freeMode?t.useOptions:t.ownWords,toggleFree:()=>this.setState({freeMode:!s.freeMode,sel:null}),
+      showReasons:!!(tn&&tn.step==='verdict'),reasons:s.reasons,onReasons:e=>this.setState({reasons:e.target.value}),
+      showMic:!!(window.AdalatFX&&AdalatFX.micOK&&s.freeMode),toggleMic:()=>this.toggleMic(),micLabel:s.listening?(L==='hi'?'सुन रहे हैं… रोकें':'Listening… tap to stop'):(L==='hi'?'बोलकर लिखें':'Speak'),
+      micBg:s.listening?'#6D28D9':'#FFFFFF',micFg:s.listening?'#FFFFFF':'#6D28D9',micBd:s.listening?'#6D28D9':'#C9BFFF',
+      showSuggest:isAi&&!!tn&&s.qPhase==='ask'&&!['plea','verdict'].includes(tn.step)&&s.suggestions.length===0,suggest:()=>this.suggest(),suggestLabel:s.sugBusy?(L==='hi'?'सोच रहे हैं…':'Thinking…'):t.suggest,
+      showFinishW:isAi&&!!tn&&s.qPhase==='ask'&&['chief','cross'].includes(tn.step)&&s.qn>=1,finishWitness:()=>this.aiEnter(s.turnIdx+1,{log:s.log,flags:s.flags,moves:s.moves}),
+      canHint:!isAi&&!!(tn&&lvCfg.hints&&!s.freeMode&&s.hidden.length===0&&tn.o.some(o=>o.g===0)&&tn.role!=='witness'),
+      hint:()=>{const i=tn.o.findIndex(o=>o.g===0);if(i>=0)this.setState({hidden:[i],sel:s.sel===i?null:s.sel});},
+      canAdjourn:!guest&&!!(advRole&&tn.ph>=2&&tn.ph<=3&&s.adjLeft[advRole]>0),adjLabel:`${t.adjourn} (${advRole?s.adjLeft[advRole]:0})`,
+      openAdj:()=>this.setState({adjModal:true}),closeAdj:()=>this.setState({adjModal:false}),showAdjModal:s.adjModal,adjReasons:this.adjReasons().map((r,i)=>({t:r,pick:()=>this.requestAdj(i)})),
+      submit:()=>{if(!canSubmit)return;if(guest){this.stopMic&&this.stopMic();this.net&&this.net.send('move',{by:me,key:this.seqKey(s),sel:s.sel,freeText:s.freeText,reasons:s.reasons,freeMode:s.freeMode});this.setState({phase:'thinking',thinkMsg:L==='hi'?'अदालत को भेजा गया…':'Sent to the court…'});return;}this.doSubmit();},submitBg:canSubmit?'#6D28D9':'#C9BFFF',
+      showOverlay:!!s.overlay,overlayDate:s.overlay?s.overlay.date:'',overlayNote:s.overlay?s.overlay.note:'',resume:()=>{if(guest)this.net&&this.net.send('resume',{});else this.resume();},resumeLabel:guest?(L==='hi'?'सुनवाई जारी करने को कहें':'Ask to resume'):t.resume,
+      courtVerdict:v?C.verdicts[v]:'',hasJudgmentText:!!s.flags.judgment,judgmentText:s.flags.judgment||'',
+      sentenceText:v==='acq'?(L==='hi'?'अभियुक्त को रिहा किया जाता है।':'The accused is set free.'):(s.flags.sentence||''),
+      hasReasons:!!s.flags.reasons,reasonsShown:s.flags.reasons||'',judgeName:this.nameFor('judge'),
+      correctVerdict:C.verdicts[corr],correctWhy:C.explain[corr],wrongVerdict:!!v&&v!==corr,lawCardBg:v===corr?'#EDE9FE':'#EDE9FE',
+      winnerName,sideLine,
+      pctLabel:myPct===null?'—':myPct+'%',passColor:myPct===null?'#5B5B8A':pass?'#6D28D9':'#6D28D9',passLabel:myPct===null?t.notScored:pass?(isAi?(L==='hi'?'बढ़िया':'Well played'):t.levelPassed):t.tryAgain,
+      passNote:myPct===null?(L==='hi'?'अंक पाने के लिए वकील या न्यायाधीश बनें।':'Play as an advocate or the judge to earn a score.'):(L==='hi'?'स्तर पास करने के लिए 60% चाहिए।':'60% passes. Your score comes from how sound each move was — not from winning.'),
+      critRows:crit,mistakes:moves.filter(m=>m.g<2).map(m=>({prompt:m.prompt,text:m.text,best:m.best,why:m.why})),hasMistakes:moves.some(m=>m.g<2),
+      hasNextLevel:hasNext,nextLevelLabel:(L==='hi'?'अगला स्तर: ':'Next: Level ')+nextN+(D.CASES[nextN-1]?' · '+D.CASES[nextN-1].levelName[L]:''),
+      nextLevel:()=>this.setState({level:nextN,screen:'brief',mode:'script',review:''}),
+      replayLabel:isAi?(L==='hi'?'नया AI केस':'New AI case'):(L==='hi'?'यह मुकदमा फिर खेलें':'Play this case again'),
+      replay:()=>{if(guest)return;if(isAi){this.setState({screen:'home',mode:'script',homeStep:'ai'});}else this.setState({screen:'brief',review:''});},
+      getReview:()=>this.getReview(),reviewBtn:s.reviewing?(L==='hi'?'शिक्षक समीक्षा लिख रहे हैं…':'Your AI teacher is writing…'):(L==='hi'?'AI शिक्षक से सरल समीक्षा लें':'Get a simple review from the AI teacher'),hasReview:!!s.review,review:s.review
+    };
+  }
+}
+</script>
+</body>
+</html>
