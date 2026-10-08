@@ -105,3 +105,21 @@ export function Figure({ role, size, initials, name }: { role: string; size: num
   );
 }
 export const initialsOf = (name: string) => (name || '?').replace(/^(PW\d+|DW\d+)\s*/, '').replace(/^(Shri|Smt\.?|Adv\.|SI|HC|Insp\.|Dr\.)\s*/, '').split(/[\s·,]+/).filter(w => /^[A-Za-z]/.test(w)).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+
+/** Never show a blank screen: catch render errors and offer a way back. */
+export class ErrorBoundary extends React.Component<{ children: React.ReactNode; onHome: () => void }, { err: any }> {
+  state = { err: null as any };
+  static getDerivedStateFromError(err: any) { return { err }; }
+  componentDidCatch(err: any) { console.error('ADALAT crashed:', err); }
+  render() {
+    if (!this.state.err) return this.props.children;
+    return (
+      <div className="wrap" style={{ maxWidth: 560, textAlign: 'center', paddingTop: 80 }}>
+        <h1 className="court" style={{ fontSize: 'var(--fs-34)' }}>Something went wrong</h1>
+        <p className="muted">The courtroom hit an error. Your progress is saved.</p>
+        <p className="mono muted" style={{ fontSize: 12 }}>{String(this.state.err && this.state.err.message || this.state.err).slice(0, 160)}</p>
+        <button className="btn btn-primary" onClick={() => { this.setState({ err: null }); this.props.onHome(); }}>Back to home</button>
+      </div>
+    );
+  }
+}
