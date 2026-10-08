@@ -33,7 +33,7 @@ export async function view(room, pl, myPlayer, { lite = false, logFrom } = {}) {
   const modes = lite ? null : await seatModes(room.id); const C = getBuiltin(room.case_id); const now = Date.now();
   const hostP = pl.find(p => p.user_id === room.host_user);
   const out = {
-    room: { id: room.id, code: room.code, status: room.status, version: room.version, level: room.level, caseId: room.case_id, expiresAt: room.expires_at, allowSpectators: room.allow_spectators, hostPlayerId: hostP ? hostP.id : null, hostOnline: !!hostP && now - new Date(hostP.last_seen).getTime() < HOST_STALE_MS },
+    room: { id: room.id, code: room.code, status: room.status, version: room.version, level: room.level, caseId: String(room.case_id).split('-')[0], expiresAt: room.expires_at, allowSpectators: room.allow_spectators, hostPlayerId: hostP ? hostP.id : null, hostOnline: !!hostP && now - new Date(hostP.last_seen).getTime() < HOST_STALE_MS },
     players: pl.map(p => ({ id: p.id, name: p.display_name, role: p.role, ready: p.ready, spectator: p.is_spectator, online: now - new Date(p.last_seen).getTime() < ONLINE_MS, isHost: p.user_id === room.host_user })),
     seatModes: modes ? Object.fromEntries(ROLES.map(r => [r, modes[r] || 'ai'])) : undefined,
     me: { playerId: myPlayer.id, role: myPlayer.role, spectator: myPlayer.is_spectator, isHost: myPlayer.user_id === room.host_user },
@@ -55,11 +55,13 @@ export default route(async (req, { requestId }) => {
 
   if (op === 'create') {
     await rateLimit('create:' + user.id, 3600, 5); await rateLimit('createip:' + ip, 3600, 20);
-    if (!getBuiltin(body.caseId)) fail('INVALID_INPUT', 400);
+    const genId = /^G[1-3]$/.test(body.caseId) ? body.caseId + '-' + crypto.randomBytes(4).readUInt32LE(0) : body.caseId; // fresh case per room
+    if (!getBuiltin(genId)) fail('INVALID_INPUT', 400);
+    const lvl = /^G[1-3]$/.test(body.caseId) ? Number(body.caseId[1]) : body.level;
     let room = null; let lastErr = null;
     for (let i = 0; i < 5 && !room; i++) {
       const code = genRoomCode(n => crypto.randomBytes(n));
-      const { data, error } = await db().from('rooms').insert({ code, host_user: user.id, case_id: body.caseId, level: body.level, allow_spectators: body.allowSpectators }).select('*').single();
+      const { data, error } = await db().from('rooms').insert({ code, host_user: user.id, case_id: genId, level: lvl, allow_spectators: body.allowSpectators }).select('*').single();
       if (!error) room = data; else { lastErr = error; if (error.code !== '23505') break; }
     }
     if (!room) { console.log(JSON.stringify({ room_insert_error: lastErr && lastErr.code, msg: String(lastErr && lastErr.message).slice(0, 160) })); fail('DB_ROOM_INSERT', 503, { pg: lastErr && lastErr.code }); }

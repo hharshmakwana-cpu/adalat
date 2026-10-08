@@ -2,7 +2,8 @@ import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { type Lang } from './i18n';
 import { Announcer } from './components/ui';
 import { store, audio, speech } from './lib/services';
-import { getBuiltin, CASE_META } from '../shared/cases.js';
+import { CASE_META, generateCase } from '../shared/cases.js';
+import { newSeed } from '../shared/generator.js';
 import { publicCase } from '../shared/engine.js';
 import { useLocalGame } from './game/hooks';
 import { Home, Levels, Roles, Brief, Settings } from './screens/Flow';
@@ -15,23 +16,24 @@ const Friends = lazy(() => import('./screens/Friends'));
 
 type Screen = 'home' | 'levels' | 'lab' | 'roles' | 'brief' | 'court' | 'friends';
 
-function LocalCourt({ C, role, lang, voice, onHome, onReplay, onNext }: any) {
+function LocalCourt({ C, role, lang, voice, pace, onHome, onReplay, onNext }: any) {
   const { view, act, tryAgain, skills } = useLocalGame(C, role, C.level || 1);
   const [done, setDone] = useState(false); const [unlocked, setUnlocked] = useState(false);
   const pub = useMemo(() => publicCase(C), [C]);
   useEffect(() => {
     if (!done || C.generated) return;
-    const p = store.progress(); const was = !!p.passed[C.id]; p.best[C.id] = p.best[C.id] || {};
-    p.best[C.id][role] = Math.max(p.best[C.id][role] || 0, skills.overall || 0);
-    if ((skills.overall || 0) >= 50) p.passed[C.id] = true; store.setProgress(p);
-    setUnlocked(!was && !!p.passed[C.id]);
+    const key = 'L' + (C.level || 1); // progress is per level; every game is a new case
+    const p = store.progress(); const was = !!p.passed[key]; p.best[key] = p.best[key] || {};
+    p.best[key][role] = Math.max(p.best[key][role] || 0, skills.overall || 0);
+    if ((skills.overall || 0) >= 50) p.passed[key] = true; store.setProgress(p);
+    setUnlocked(!was && !!p.passed[key]);
   }, [done]);
   if (done) {
     const next = CASE_META.find((c: any) => c.level === (C.level || 1) + 1);
-    const passed = !!store.progress().passed[C.id];
+    const passed = !!store.progress().passed['L' + (C.level || 1)];
     return <Result lang={lang} pub={pub} view={view} role={role} skills={skills} onReplay={onReplay} onHome={onHome} hasNext={!C.generated && !!next && passed} nextLabel={unlocked ? '🔓 ' + G[lang].unlocked : undefined} onNext={() => next && onNext(next.id, unlocked ? next.level : undefined)} />;
   }
-  return <Court pub={pub} view={view} act={act} myRole={role} lang={lang} voice={voice} tryAgain={tryAgain} onExit={onHome} onFinished={() => setDone(true)} />;
+  return <Court pace={pace} pub={pub} view={view} act={act} myRole={role} lang={lang} voice={voice} tryAgain={tryAgain} onExit={onHome} onFinished={() => setDone(true)} />;
 }
 
 export default function App() {
@@ -46,7 +48,9 @@ export default function App() {
   useEffect(() => { const first = () => { audio.ensure(); window.removeEventListener('pointerdown', first); }; window.addEventListener('pointerdown', first); return () => window.removeEventListener('pointerdown', first); }, []);
   useEffect(() => { window.scrollTo(0, 0); }, [screen]);
   const go = (s: Screen) => { speech.stop(); setScreen(s); };
-  const pick = (id: string) => { setC(getBuiltin(id)); go('brief'); }; // sensible default role → straight to START
+  // Every game is a brand-new generated case for that level. Default role → straight to START.
+  const pick = (id: string) => { const lvl = Math.max(1, Math.min(3, Number(String(id).replace(/\D/g, '')) || 1)); setC(generateCase(lvl, newSeed())); go('brief'); };
+  const pace = ({ relaxed: 1.4, normal: 1, fast: 0.55 } as any)[prefs.pace || 'normal'] || 1;
   const inGame = screen === 'court' || screen === 'friends';
 
   return (
@@ -63,8 +67,8 @@ export default function App() {
         {screen === 'lab' && <Lab lang={lang} onReady={(c: any) => { setC(c); go('brief'); }} onBuiltin={() => go('levels')} onBack={() => go('home')} />}
         {screen === 'roles' && C && <Roles lang={lang} initial={role} onBack={() => go('brief')} onPick={(r: string) => { setRole(r); upd({ role: r }); go('brief'); }} />}
         {screen === 'brief' && C && <Brief lang={lang} pub={publicCase(C)} role={role} onBack={() => go(C.generated ? 'lab' : 'levels')} onRole={() => go('roles')} onEnter={() => { setRun(x => x + 1); go('court'); }} />}
-        {screen === 'court' && C && <LocalCourt key={run} C={C} role={role} lang={lang} voice={!!prefs.voice} onHome={() => go('home')} onReplay={() => { setRun(x => x + 1); }} onNext={(id: string, lvl?: number) => { if (lvl) { setFresh(lvl); go('levels'); } else pick(id); }} />}
-        {screen === 'friends' && <Friends lang={lang} voice={!!prefs.voice} onHome={() => { history.replaceState(null, '', '/'); go('home'); }} name={prefs.name || ''} setName={(n: string) => upd({ name: n })} />}
+        {screen === 'court' && C && <LocalCourt key={run} C={C} role={role} lang={lang} pace={pace} voice={!!prefs.voice} onHome={() => go('home')} onReplay={() => { pick('L' + (C.level || 1)); }} onNext={(id: string, lvl?: number) => { if (lvl) { setFresh(lvl); go('levels'); } else pick(id); }} />}
+        {screen === 'friends' && <Friends lang={lang} pace={pace} voice={!!prefs.voice} onHome={() => { history.replaceState(null, '', '/'); go('home'); }} name={prefs.name || ''} setName={(n: string) => upd({ name: n })} />}
       </Suspense>
       {settings && <Settings lang={lang} prefs={prefs} upd={upd} onClose={() => setSettings(false)} onLab={() => { setSettings(false); go('lab'); }} />}
     </Announcer>

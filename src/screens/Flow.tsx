@@ -43,7 +43,7 @@ export function Levels({ lang, progress, onPick, onBack, justUnlocked }: { lang:
               <span className="lvl-n">{unlocked ? L.icon : '🔒'}<small>{g.level} {c.level}</small></span>
               <span className="lvl-body">
                 <b className="lvl-name">{L.name[lang].toUpperCase()}</b>
-                <span className="lvl-case">{ICON[c.type] || '⚖️'} {c.title}</span>
+                <span className="lvl-case">🎲 {lang === 'hi' ? 'हर बार नया केस' : 'A new case every time'}</span>
                 <span className="muted">{unlocked ? L.line[lang] : g.locked}</span>
               </span>
               <span className="lvl-side"><Stars n={starsFor(best || null)} />{best ? <small className="muted">{g.best} {best}</small> : null}{justUnlocked === c.level && <small className="lvl-badge">{g.unlocked}</small>}</span>
@@ -120,6 +120,7 @@ export function Settings({ lang, prefs, upd, onClose, onLab }: { lang: Lang; pre
       <Row label={g.sound} on={!!prefs.sound} k="sound" />
       <Row label={g.reducedAudio} on={!!prefs.reducedAudio} k="reducedAudio" />
       <Row label={g.voice} on={!!prefs.voice} k="voice" />
+      <div className="set-row"><span>{lang === 'hi' ? 'खेल की गति' : 'Game speed'}</span><div className="seg" role="group" aria-label="Game speed">{(['relaxed', 'normal', 'fast'] as const).map(k => <button key={k} aria-pressed={(prefs.pace || 'normal') === k} onClick={() => upd({ pace: k })}>{{ relaxed: lang === 'hi' ? 'धीमा' : 'Relaxed', normal: lang === 'hi' ? 'सामान्य' : 'Normal', fast: lang === 'hi' ? 'तेज़' : 'Fast' }[k]}</button>)}</div></div>
       <hr style={{ border: 0, borderTop: '1px solid var(--color-line)', width: '100%' }} />
       <button className="btn" onClick={onLab}>🧪 {g.practice}</button>
     </Dialog>

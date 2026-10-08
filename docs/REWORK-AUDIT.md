@@ -212,3 +212,12 @@ This audit records each problem, what changed and why, and what was actually mea
 3. Hindi covers all new UI strings; the built-in case text is still English.
 4. Lobby role and case changes after creation use the existing ops. There is no in-lobby case switcher yet.
 5. Real multiplayer latency, the Playwright breakpoints, axe and 2/3/5-player live tests still need to be run on a machine with Node and a Supabase project.
+
+## v8.1 — pacing, new cases, characters
+- **Story beats:** after a move, other players' and AI moves replay one line at a time (1.5–5 s each, scaled by Settings → Game speed: Relaxed / Normal / Fast), with the speaker highlighted. Next ›, Skip all », Enter/Space. Authoritative state is already updated; beats are presentation only.
+- **A new case every time:** `shared/generator.js` builds a fresh, fully playable case from a seed (names, city, place, item, clothing, time, price; 4 plots — receiver → BNS 317, mistaken identity → acquittal, strong case → conviction, police confession only → acquittal under BSA 23). The plot fixes the legally correct outcome from the facts.
+  - Level 1: receiver/strong. Level 2: receiver/misid/strong. Level 3: misid/confession/strong.
+  - Multiplayer: the server picks the seed (`G<level>-<seed>`) and never sends it to clients (ids are stripped in projections), so clients can't regenerate the answer.
+  - Verified in the sandbox: 180 generated cases × 5 roles × best/first strategies — all finish, best play scores 100, the judge's correct verdict matches the plot, no missing exhibit references.
+  - Decisions per game (best play): Prosecutor 5, Judge 3–6, Defence 3–6, Witness 4, Accused 2.
+- **Characters:** vector busts per role (judge's robe with brass trim and white bands, advocates' black coats and bands, witness kurta, accused shirt), with skin tone, hair, glasses varied by name; blink and talking mouth animation on the active speaker.

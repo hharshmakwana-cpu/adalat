@@ -15,6 +15,7 @@ export const STEP_GAME: Record<string, { head: L; term: L; icon: string }> = {
   cross: { head: { en: 'Test the story', hi: 'कहानी परखें' }, term: { en: 'Cross-examination', hi: 'जिरह' }, icon: '🔍' },
   evidence: { head: { en: 'Show the clue', hi: 'सुराग दिखाएँ' }, term: { en: 'Evidence on record', hi: 'साक्ष्य' }, icon: '🧩' },
   summon: { head: { en: 'Get the missing clue', hi: 'छूटा सुराग मँगाएँ' }, term: { en: 'Summons & adjournment', hi: 'समन और स्थगन' }, icon: '📨' },
+  statement: { head: { en: 'Explain your side', hi: 'अपनी बात रखें' }, term: { en: 'Statement of the accused', hi: 'अभियुक्त का बयान' }, icon: '🙋' },
   args: { head: { en: 'Make your strongest case', hi: 'अपनी सबसे मज़बूत बात रखें' }, term: { en: 'Final arguments', hi: 'अंतिम बहस' }, icon: '🗣️' },
   verdict: { head: { en: 'Make the final call', hi: 'अंतिम फ़ैसला करें' }, term: { en: 'Judgment', hi: 'फ़ैसला' }, icon: '⚖️' },
   sentence: { head: { en: 'Choose the outcome', hi: 'परिणाम चुनें' }, term: { en: 'Sentence', hi: 'सज़ा' }, icon: '📜' }
@@ -36,6 +37,8 @@ export function clueIcon(name: string) {
   if (/chat|whatsapp|message|sms|email/.test(n)) return '💬';
   if (/vehicle|car|bike|scooter|truck/.test(n)) return '🚗';
   if (/breath|alcohol|blood/.test(n)) return '🧪';
+  if (/pharmacy|alibi/.test(n)) return '💊';
+  if (/cap|hoodie|shirt|raincoat|helmet|backpack|seizure/.test(n)) return '🧢';
   if (/fir|complaint|report|memo|statement/.test(n)) return '📄';
   return '🗂️';
 }

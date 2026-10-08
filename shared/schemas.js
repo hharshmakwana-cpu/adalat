@@ -17,7 +17,7 @@ export const Envelope = z.object({
 
 export const DisplayName = Text(2, 24).refine(s => !/[<>{}]/.test(s), 'NAME_CHARS');
 export const RoomOps = {
-  create: z.object({ displayName: DisplayName, caseId: z.enum(['L1', 'L2', 'L3']), level: z.number().int().min(1).max(3), role: Role.nullable(), allowSpectators: z.boolean().default(true) }).strict(),
+  create: z.object({ displayName: DisplayName, caseId: z.enum(['L1', 'L2', 'L3', 'G1', 'G2', 'G3']), level: z.number().int().min(1).max(3), role: Role.nullable(), allowSpectators: z.boolean().default(true) }).strict(),
   join: z.object({ code: z.string().regex(CODE_RE), displayName: DisplayName, wantRole: Role.nullable().optional(), spectate: z.boolean().optional() }).strict(),
   role: z.object({ roomId: z.string().uuid(), role: Role.nullable() }).strict(),
   ready: z.object({ roomId: z.string().uuid(), ready: z.boolean() }).strict(),

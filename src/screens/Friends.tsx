@@ -8,13 +8,13 @@ import { Dialog } from '../components/ui';
 import Court from './Court';
 import Result from './Result';
 
-export default function Friends({ lang, voice, onHome, name, setName }: { lang: Lang; voice: boolean; onHome: () => void; name: string; setName: (n: string) => void }) {
+export default function Friends({ lang, voice, pace, onHome, name, setName }: { lang: Lang; voice: boolean; pace?: number; onHome: () => void; name: string; setName: (n: string) => void }) {
   const t = STR[lang];
   const [session, setSession] = useState<any>(() => store.room());
   const [gone, setGone] = useState('');
   if (!mpEnabled) return <div className="wrap" style={{ maxWidth: 720 }}><button className="icon-btn" onClick={onHome} aria-label={t.back}>←</button><h1 className="court" style={{ fontSize: 'var(--fs-34)' }}>{t.mpTitle}</h1><p className="muted">{t.mpOff}</p></div>;
   if (!session) return <Entry lang={lang} name={name} setName={setName} onBack={onHome} onIn={(s: any) => { store.setRoom(s); setSession(s); }} notice={gone ? errText(gone, lang) : ''} />;
-  return <Room lang={lang} voice={voice} session={session} onLeave={(code?: string) => { store.setRoom(null); setSession(null); setGone(code || ''); }} />;
+  return <Room lang={lang} voice={voice} pace={pace} session={session} onLeave={(code?: string) => { store.setRoom(null); setSession(null); setGone(code || ''); }} />;
 }
 
 function Entry({ lang, name, setName, onBack, onIn, notice }: any) {
@@ -23,7 +23,7 @@ function Entry({ lang, name, setName, onBack, onIn, notice }: any) {
   const [err, setErr] = useState(notice || ''); const [busy, setBusy] = useState(false); const [taken, setTaken] = useState<any>(null);
   const nm = validName(name);
   const run = async (fn: () => Promise<any>) => { if (!nm.ok) { setErr(lang === 'hi' ? 'नाम 2–24 अक्षरों का हो।' : 'Name must be 2–24 characters.'); return; } setBusy(true); setErr(''); try { const v = await fn(); onIn({ roomId: v.room.id, token: v.token }); } catch (e: any) { if (e.code === 'ROLE_TAKEN') setTaken(e.detail); else setErr(errText(e.code, lang) + ' (' + (e.code || 'UNKNOWN') + ')'); } finally { setBusy(false); } };
-  const create = () => run(() => api('/api/room/create', { displayName: nm.value, caseId, level, role, allowSpectators: true }));
+  const create = () => run(() => api('/api/room/create', { displayName: nm.value, caseId: 'G' + level, level, role, allowSpectators: true }));
   const join = (wantRole?: string | null, spectate?: boolean) => run(() => api('/api/room/join', { code, displayName: nm.value, wantRole: wantRole ?? null, spectate: !!spectate }));
   return (
     <div className="wrap" style={{ maxWidth: 960 }}>
@@ -34,7 +34,7 @@ function Entry({ lang, name, setName, onBack, onIn, notice }: any) {
           <h2 id="h-c" className="court" style={{ fontSize: 'var(--fs-26)' }}>{t.create}</h2>
           <button className="btn btn-primary btn-lg" disabled={busy} onClick={create}>{busy ? '…' : t.createBtn}</button>
           <details className="more" style={{ padding: 0, background: 'none' }}><summary>{lang === 'hi' ? 'रूम विकल्प' : 'Room options'}</summary>
-          <div className="form-row"><label htmlFor="cs">Case</label><select id="cs" className="input" value={caseId} onChange={e => { setCaseId(e.target.value); setLevel(Number(e.target.value.slice(1))); }}>{CASE_META.map((c: any) => <option key={c.id} value={c.id}>{c.title}</option>)}</select></div>
+          
           <div className="seg" role="group" aria-label={t.level}>{[1, 2, 3].map(n => <button key={n} aria-pressed={level === n} onClick={() => setLevel(n)}>{[t.beginner, t.standard, t.expert][n - 1]}</button>)}</div>
           <div className="form-row"><label htmlFor="rl">{t.role}</label><select id="rl" className="input" value={role} onChange={e => setRole(e.target.value)}>{ROLE_ORDER.map(r => <option key={r} value={r}>{ROLE_INFO[r].name[lang]}</option>)}</select></div>
           </details>
@@ -53,7 +53,7 @@ function Entry({ lang, name, setName, onBack, onIn, notice }: any) {
   );
 }
 
-function Room({ lang, voice, session, onLeave }: any) {
+function Room({ lang, voice, pace, session, onLeave }: any) {
   const t = STR[lang]; const { data, conn, error, op, act, sending } = useRoom(session, (code: string) => onLeave(code));
   const [copied, setCopied] = useState<'' | 'ok' | 'fail'>(''); const [roleErr, setRoleErr] = useState<any>(null); const [showResult, setShowResult] = useState(false);
   useEffect(() => { if (data?.game?.status !== 'done') setShowResult(false); }, [data?.game?.status]);
@@ -65,7 +65,7 @@ function Room({ lang, voice, session, onLeave }: any) {
   if (data.game && (data.game.status === 'court' || !showResult)) {
     return <>
       {hostGone && <HostGone lang={lang} onTake={() => op('transfer-host').catch(() => {})} onLeave={leave} />}
-      <Court sending={sending} onExit={leave} pub={data.case} view={data.game} act={act} myRole={me.spectator ? null : me.role} lang={lang} voice={voice} conn={conn} error={error} spectator={me.spectator || !me.role} names={names} onFinished={() => setShowResult(true)} />
+      <Court pace={pace} sending={sending} onExit={leave} pub={data.case} view={data.game} act={act} myRole={me.spectator ? null : me.role} lang={lang} voice={voice} conn={conn} error={error} spectator={me.spectator || !me.role} names={names} onFinished={() => setShowResult(true)} />
     </>;
   }
   if (data.game && showResult) {

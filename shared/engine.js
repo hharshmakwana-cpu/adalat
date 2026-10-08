@@ -185,7 +185,7 @@ export function awards(s, players) {
 export function publicCase(C) {
   const laws = (C.lawIds || (C.laws || []).map(l => ({ id: lawIdFor(l), here: l.here })))
     .map(x => typeof x === 'string' ? { id: x } : x).filter(x => x.id && LAW[x.id]).map(x => ({ ...LAW[x.id], here: x.here || '' }));
-  return { id: C.id, level: C.level, type: C.type, title: C.title, court: C.court, caseNo: C.caseNo, oneLine: C.oneLine, story: C.story || [], timeline: C.timeline || [],
+  return { id: String(C.id).split('-')[0], level: C.level, type: C.type, title: C.title, court: C.court, caseNo: C.caseNo, oneLine: C.oneLine, story: C.story || [], timeline: C.timeline || [],
     people: C.people || [], exhibits: C.exhibits || [], names: C.names || {}, levelName: C.levelName, learn: C.learn, laws, fictional: true, generated: !!C.generated };
 }
 
@@ -194,7 +194,7 @@ export function project(s, C, viewer) {
   const t = currentTurn(s, C); const done = s.status === 'done'; const role = viewer && viewer.role;
   const showFb = done || LEVELS[s.level]?.feedback;
   return {
-    sessionId: s.sessionId, caseId: s.caseId, version: s.version, turnId: s.turnId, status: s.status, ph: s.ph, level: s.level,
+    sessionId: s.sessionId, caseId: String(s.caseId).split('-')[0], version: s.version, turnId: s.turnId, status: s.status, ph: s.ph, level: s.level,
     log: s.log, marked: s.marked, adj: s.adj, deadlineAt: s.deadlineAt, moments: s.moments.slice(-12), seats: Object.fromEntries(ROLES.map(r => [r, isHuman(s.seats, r) ? 'human' : 'ai'])),
     turn: t ? { id: t.id, role: t.role, step: t.step, prompt: t.p, free: !!t.free, w: t.w || null, options: optionsFor(s, C, t), mine: !!role && role === t.role && !viewer.spectator, suggest: !!LEVELS[s.level]?.suggest } : null,
     verdict: s.verdict ? { v: s.verdict.v, text: s.verdict.text } : null,
