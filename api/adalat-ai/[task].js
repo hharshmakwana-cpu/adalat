@@ -3,7 +3,7 @@
 import { route, readJson, parse, fail, mpConfigured, requireUser, rateLimit, ipOf, logSec } from '../_lib/server.js';
 import { ask, aiConfigured, strictJson } from '../_lib/ai.js';
 import { z } from 'zod';
-import { GeneratedCase, caseProblems } from '../../shared/schemas.js';
+import { GeneratedCase, caseProblems, normalizeGenerated } from '../../shared/schemas.js';
 import { LAW, LAW_IDS_FOR_TYPE } from '../../shared/legal.js';
 import { normalizeText } from '../../shared/text.js';
 
@@ -53,11 +53,13 @@ export default route(async (req, { requestId }) => {
 
   if (task === 'generate-case') {
     const b = parse(Gen, readJson(req, 8 * 1024)); const uid = await guard(req, 'gen', 6, 20);
-    let problems = null;
+    let problems = null; const t0 = Date.now(); const deadline = t0 + 56000;
     for (let attempt = 0; attempt < 2; attempt++) {
-      let text; try { text = await ask(genPrompt(b, problems), { maxTokens: 3800, json: true }); } catch (e) { logSec('ai_fail', { requestId, userId: uid, code: 'gen' }); fail('AI_UNAVAILABLE', 503); }
+      if (attempt > 0 && Date.now() > t0 + 24000) break; // not enough time left for a second try
+      let text; try { text = await ask(genPrompt(b, problems), { maxTokens: 3800, json: true, timeoutMs: 45000, deadline }); }
+      catch (e) { logSec('ai_fail', { requestId, userId: uid, code: 'gen' + attempt }); if (attempt === 0) fail('AI_UNAVAILABLE', 503); break; }
       const raw = strictJson(text); if (!raw) { problems = ['output was not valid JSON']; continue; }
-      const r = GeneratedCase.safeParse(raw); if (!r.success) { problems = r.error.issues.slice(0, 6).map(i => i.path.join('.') + ' ' + i.message); continue; }
+      const r = GeneratedCase.safeParse(normalizeGenerated(raw, b.type)); if (!r.success) { problems = r.error.issues.slice(0, 6).map(i => i.path.join('.') + ' ' + i.message); continue; }
       if (r.data.type !== b.type) { problems = ['type must be ' + b.type]; continue; }
       const p = caseProblems(r.data); if (p.length) { problems = p.slice(0, 8); continue; }
       logSec('ai_case_ok', { requestId, userId: uid });

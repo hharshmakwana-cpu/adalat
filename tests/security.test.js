@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import crypto from 'node:crypto';
-import { Envelope, RoomOps, GeneratedCase, caseProblems } from '../shared/schemas.js';
+import { Envelope, RoomOps, GeneratedCase, caseProblems, normalizeGenerated } from '../shared/schemas.js';
 import { normalizeText, validName, genRoomCode, CODE_RE, cleanCode, looksLikeSecret } from '../shared/text.js';
 import { LAW, LAW_IDS_FOR_TYPE } from '../shared/legal.js';
 
@@ -68,6 +68,7 @@ describe('AI case quality gate', () => {
   it('rejects references to missing exhibits', () => { const c = sample(); c.turns[9].o[0].t = 'P-7 proves it'; expect(caseProblems(GeneratedCase.parse(c)).some(p => /missing exhibit/.test(p))).toBe(true); });
   it('rejects verdicts without all outcomes', () => { const c = sample(); c.turns[10].o.pop(); c.turns[10].o.push({ t: 'x', v: 'full' }); expect(caseProblems(GeneratedCase.parse(c)).length).toBeGreaterThan(0); });
   it('rejects missing fields and wrong types', () => { const c = sample(); delete c.explain; expect(GeneratedCase.safeParse(c).success).toBe(false); expect(GeneratedCase.safeParse({ ...sample(), story: 'one' }).success).toBe(false); });
-  it('rejects unknown keys (no smuggled fields)', () => expect(GeneratedCase.safeParse({ ...sample(), html: '<img onerror=x>' }).success).toBe(false));
+  it('drops unknown keys (smuggled fields never reach the game)', () => { const r = GeneratedCase.safeParse({ ...sample(), html: '<img onerror=x>' }); expect(r.success).toBe(true); expect('html' in r.data).toBe(false); });
+  it('normalises harmless shape differences but still validates law', () => { const c = sample(); c.timeline = c.timeline.map(([when, what]) => ({ when, what })); c.turns[7].free = true; const r = GeneratedCase.safeParse(normalizeGenerated(c, 'theft')); expect(r.success).toBe(true); expect(caseProblems(r.data)).toEqual([]); });
   it('rejects outcome rules that depend on flags nothing sets', () => { const c = sample(); c.correct.ifFlags = [['ghost', 'acq']]; expect(caseProblems(GeneratedCase.parse(c)).some(p => /unset flag/.test(p))).toBe(true); });
 });

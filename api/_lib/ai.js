@@ -15,14 +15,19 @@ async function groqModels() {
   cache.groq = [process.env.GROQ_MODEL, ...ids.sort((a, b) => score(b) - score(a))].filter(Boolean).slice(0, 2); cache.at = Date.now();
   return cache.groq;
 }
-async function groq(prompt, { maxTokens, json }) {
+async function groq(prompt, { maxTokens, json, timeoutMs, deadline }) {
   for (const model of await groqModels()) {
+    for (const useJson of json ? [true, false] : [false]) {
+    if (deadline && Date.now() > deadline - 3000) break;
     let r; try {
       r = await call('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + process.env.GROQ_API_KEY.trim() },
-        body: JSON.stringify({ model, max_tokens: maxTokens, temperature: 0.8, ...(json ? { response_format: { type: 'json_object' } } : {}), messages: [{ role: 'user', content: prompt }] }) }, 25000);
-    } catch { continue; }
-    if (r.ok) { const j = await r.json(); const text = j.choices?.[0]?.message?.content || ''; if (text) return text; continue; }
-    if (r.status === 401 || r.status === 403) break; if (r.status === 404) cache.groq = null;
+        body: JSON.stringify({ model, max_tokens: maxTokens, temperature: 0.8, ...(useJson ? { response_format: { type: 'json_object' } } : {}), messages: [{ role: 'user', content: prompt }] }) }, budget(timeoutMs, deadline));
+    } catch { break; }
+    if (r.ok) { const j = await r.json(); const text = j.choices?.[0]?.message?.content || ''; if (text) return text; break; }
+    if (r.status === 400 && useJson) continue; // model does not support JSON mode — retry without it
+    if (r.status === 401 || r.status === 403) throw new Error('groq auth'); if (r.status === 404) cache.groq = null;
+    break;
+    }
   }
   throw new Error('groq failed');
 }
@@ -36,11 +41,12 @@ async function geminiModels() {
   cache.gemini = [process.env.GEMINI_MODEL, ...ids.sort((a, b) => ver(b) - ver(a))].filter(Boolean).slice(0, 2); cache.at = Date.now();
   return cache.gemini;
 }
-async function gemini(prompt, { maxTokens, json }) {
+async function gemini(prompt, { maxTokens, json, timeoutMs, deadline }) {
   for (const model of await geminiModels()) {
+    if (deadline && Date.now() > deadline - 3000) break;
     let r; try {
       r = await call(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY.trim() },
-        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: maxTokens, temperature: 0.8, ...(json ? { responseMimeType: 'application/json' } : {}) } }) }, 25000);
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: maxTokens, temperature: 0.8, ...(json ? { responseMimeType: 'application/json' } : {}) } }) }, budget(timeoutMs, deadline));
     } catch { continue; }
     if (r.ok) { const j = await r.json(); const text = (j.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join(''); if (text) return text; continue; }
     if ([400, 401, 403].includes(r.status)) break; if (r.status === 404) cache.gemini = null;
@@ -48,16 +54,18 @@ async function gemini(prompt, { maxTokens, json }) {
   throw new Error('gemini failed');
 }
 
-/** One provider attempt + one fallback. Throws ApiError-compatible codes only. */
-export async function ask(prompt, { maxTokens = 400, json = false } = {}) {
+const budget = (t, deadline) => Math.max(3000, Math.min(t || 25000, deadline ? deadline - Date.now() - 1500 : Infinity));
+/** One provider attempt + one fallback, inside an overall deadline. Throws ApiError-compatible codes only. */
+export async function ask(prompt, { maxTokens = 400, json = false, timeoutMs = 25000, deadline = 0 } = {}) {
   if (prompt.length > 24000) { const e = new Error('PROMPT_TOO_LARGE'); e.code = 'PAYLOAD_TOO_LARGE'; e.status = 413; throw e; }
   const order = [process.env.GROQ_API_KEY && groq, process.env.GEMINI_API_KEY && gemini].filter(Boolean);
-  for (const p of order) { try { return await p(prompt, { maxTokens, json }); } catch { /* try fallback */ } }
+  for (const p of order) { if (deadline && Date.now() > deadline - 3000) break; try { return await p(prompt, { maxTokens, json, timeoutMs, deadline }); } catch { /* try fallback */ } }
   const e = new Error('AI_UNAVAILABLE'); e.code = 'AI_UNAVAILABLE'; e.status = 503; throw e;
 }
 
-/** Strict JSON extraction — strips code fences only. Malformed or truncated output is REJECTED, never repaired. */
+/** Strict JSON extraction — strips code fences / leading prose only. Malformed or truncated output is REJECTED, never repaired. */
 export function strictJson(text) {
-  const t = String(text || '').replace(/^\s*```(?:json)?/i, '').replace(/```\s*$/i, '').trim();
+  let t = String(text || '').replace(/^\s*```(?:json)?/i, '').replace(/```\s*$/i, '').trim();
+  const a = t.indexOf('{'), b = t.lastIndexOf('}'); if (a > 0 && b > a) t = t.slice(a, b + 1);
   try { return JSON.parse(t); } catch { return null; }
 }

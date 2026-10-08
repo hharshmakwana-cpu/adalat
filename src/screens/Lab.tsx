@@ -5,7 +5,7 @@ import { api, store, AppError } from '../lib/services';
 export default function Lab({ lang, onReady, onBuiltin, onBack }: { lang: Lang; onReady: (c: any) => void; onBuiltin: () => void; onBack: () => void }) {
   const t = STR[lang];
   const [type, setType] = useState<'theft' | 'cyber' | 'cheating' | 'road'>('theft'); const [level, setLevel] = useState(1);
-  const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle'); const [step, setStep] = useState(0); const [err, setErr] = useState('');
+  const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle'); const [step, setStep] = useState(0); const [err, setErr] = useState(''); const [ref, setRef] = useState('');
   const ctl = useRef<AbortController | null>(null);
   useEffect(() => () => ctl.current?.abort(), []);
   useEffect(() => { if (state !== 'loading') return; const id = setInterval(() => setStep(s => Math.min(3, s + 1)), 4500); return () => clearInterval(id); }, [state]);
@@ -17,7 +17,7 @@ export default function Lab({ lang, onReady, onBuiltin, onBack }: { lang: Lang; 
       const c = { ...r.case, id: 'AI-' + Date.now(), level, generated: true };
       store.addSeen((c.title + ' — ' + c.oneLine).slice(0, 160));
       onReady(c);
-    } catch (e: any) { if (e && e.name === 'AbortError') return; setErr(e instanceof AppError ? e.code : 'UNKNOWN'); setState('error'); }
+    } catch (e: any) { if (e && e.name === 'AbortError') return; setErr(e instanceof AppError ? e.code : 'UNKNOWN'); setRef(e instanceof AppError && e.requestId ? e.requestId.slice(0, 8) : ''); setState('error'); }
   };
   return (
     <div className="wrap" style={{ maxWidth: 820 }}>
@@ -41,6 +41,7 @@ export default function Lab({ lang, onReady, onBuiltin, onBack }: { lang: Lang; 
           <p className="muted" style={{ fontSize: 14 }}>{t.comingSoon}</p>
           {state === 'error' && <div role="alert" style={{ background: 'var(--color-surface)', borderTop: '4px solid var(--color-danger)', borderRadius: 10, padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <b className="court" style={{ fontSize: 'var(--fs-21)' }}>{t.genFail}</b><span className="muted">{err === 'AI_INVALID' || err === 'RATE_LIMITED' ? errText(err, lang) : t.genFailSub}</span>
+            <span className="mono muted" style={{ fontSize: 12 }}>{(lang === 'hi' ? 'कोड: ' : 'Code: ') + err}{ref ? ' · ref ' + ref : ''}</span>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}><button className="btn btn-primary" onClick={go}>{lang === 'hi' ? 'फिर कोशिश करें' : 'Try again'}</button><button className="btn" onClick={onBuiltin}>{t.builtin}</button></div>
           </div>}
           {state !== 'error' && <button className="btn btn-primary btn-lg" onClick={go}>{t.generate}</button>}
