@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { type Lang } from './i18n';
-import { Announcer } from './components/ui';
+import { Announcer, ErrorBoundary } from './components/ui';
 import { store, audio, speech } from './lib/services';
 import { CASE_META, generateCase } from '../shared/cases.js';
 import { newSeed } from '../shared/generator.js';
@@ -61,7 +61,7 @@ export default function App() {
           <button className="icon-btn" onClick={() => setSettings(true)} aria-label={G[lang].settings}>⚙</button>
         </div></header>
       )}
-      <Suspense fallback={<div className="wrap"><p className="muted" role="status">{lang === 'hi' ? 'अदालत तैयार हो रही है…' : 'Preparing the courtroom…'}</p></div>}>
+      <ErrorBoundary onHome={() => go('home')}><Suspense fallback={<div className="wrap"><p className="muted" role="status">{lang === 'hi' ? 'अदालत तैयार हो रही है…' : 'Preparing the courtroom…'}</p></div>}>
         {screen === 'home' && <Home lang={lang} onPlay={() => go('levels')} onFriends={() => go('friends')} onSettings={() => setSettings(true)} />}
         {screen === 'levels' && <Levels lang={lang} progress={store.progress()} justUnlocked={fresh} onPick={(id: string) => { setFresh(undefined); pick(id); }} onBack={() => go('home')} />}
         {screen === 'lab' && <Lab lang={lang} onReady={(c: any) => { setC(c); go('brief'); }} onBuiltin={() => go('levels')} onBack={() => go('home')} />}
@@ -69,7 +69,7 @@ export default function App() {
         {screen === 'brief' && C && <Brief lang={lang} pub={publicCase(C)} role={role} onBack={() => go(C.generated ? 'lab' : 'levels')} onRole={() => go('roles')} onEnter={() => { setRun(x => x + 1); go('court'); }} />}
         {screen === 'court' && C && <LocalCourt key={run} C={C} role={role} lang={lang} pace={pace} voice={!!prefs.voice} onHome={() => go('home')} onReplay={() => { pick('L' + (C.level || 1)); }} onNext={(id: string, lvl?: number) => { if (lvl) { setFresh(lvl); go('levels'); } else pick(id); }} />}
         {screen === 'friends' && <Friends lang={lang} pace={pace} voice={!!prefs.voice} onHome={() => { history.replaceState(null, '', '/'); go('home'); }} name={prefs.name || ''} setName={(n: string) => upd({ name: n })} />}
-      </Suspense>
+      </Suspense></ErrorBoundary>
       {settings && <Settings lang={lang} prefs={prefs} upd={upd} onClose={() => setSettings(false)} onLab={() => { setSettings(false); go('lab'); }} />}
     </Announcer>
   );
