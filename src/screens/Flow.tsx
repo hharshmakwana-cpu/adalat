@@ -1,115 +1,127 @@
 import React, { useState } from 'react';
-import { STR, ROLE_INFO, ROLE_ORDER, type Lang } from '../i18n';
-import { LawCard } from '../components/ui';
+import { type Lang, STR } from '../i18n';
+import { Dialog, LawCard } from '../components/ui';
 import { CASE_META } from '../../shared/cases.js';
+import { G, ROLE_GAME, LEVEL_GAME, starsFor } from '../game/presentation';
+import { ROLE_INFO } from '../i18n';
 
-export function Home({ lang, onPlay, onFriends, onLab }: { lang: Lang; onPlay: () => void; onFriends: () => void; onLab: () => void }) {
-  const t = STR[lang];
+const ICON: Record<string, string> = { theft: '📱', road: '🚗', cyber: '💻', cheating: '🎭' };
+const Stars = ({ n }: { n: number }) => <span className="stars" aria-label={n + ' of 3 stars'}>{[0, 1, 2].map(i => <span key={i} data-on={i < n}>★</span>)}</span>;
+
+export function Home({ lang, onPlay, onFriends, onSettings }: { lang: Lang; onPlay: () => void; onFriends: () => void; onSettings: () => void }) {
+  const g = G[lang];
   return (
     <section className="home" aria-labelledby="h-home">
       <div className="home-cols" aria-hidden="true"><span /><span /><span /><span /></div>
       <div className="home-light" aria-hidden="true" />
+      <div className="home-float" aria-hidden="true"><span>📱</span><span>🧾</span><span>🎥</span><span>📍</span></div>
       <div className="home-bench" aria-hidden="true" />
-      <span className="kicker">{t.courtNow}</span>
       <h1 id="h-home">ADALAT</h1>
-      <p className="tagline">{t.tagline}</p>
-      <p className="muted" style={{ fontSize: 'var(--fs-18)', maxWidth: 520 }}>{t.sub}</p>
+      <p className="tagline">{g.tagline}</p>
       <div className="home-actions">
-        <button className="btn btn-primary btn-lg" onClick={onPlay}>{t.play}</button>
-        <div className="row">
-          <button className="btn btn-brass" onClick={onFriends}>{t.friends}</button>
-          <button className="btn btn-brass" onClick={onLab}>{t.lab}</button>
-        </div>
+        <button className="btn btn-primary btn-lg" onClick={onPlay}>▶ {g.play}</button>
+        <button className="btn btn-brass btn-lg" style={{ fontSize: 'var(--fs-16)' }} onClick={onFriends}>👥 {g.friends}</button>
       </div>
+      <button className="link-btn" onClick={onSettings}>⚙ {g.settings}</button>
     </section>
   );
 }
 
-export function Cases({ lang, progress, onPick, onLab, onBack }: { lang: Lang; progress: any; onPick: (id: string) => void; onLab: () => void; onBack: () => void }) {
-  const t = STR[lang];
+/** Level progression: one case per level, stars, locks. */
+export function Levels({ lang, progress, onPick, onBack, justUnlocked }: { lang: Lang; progress: any; onPick: (id: string) => void; onBack: () => void; justUnlocked?: number }) {
+  const g = G[lang];
   return (
-    <div className="wrap">
-      <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}><button className="icon-btn" onClick={onBack} aria-label={t.back}>←</button><h1 className="court" style={{ fontSize: 'var(--fs-34)' }}>{t.chooseCase}</h1></div>
-      <div className="folders">
+    <div className="wrap" style={{ maxWidth: 760 }}>
+      <div className="g-row"><button className="icon-btn" onClick={onBack} aria-label={STR[lang].back}>←</button><h1 className="court" style={{ fontSize: 'var(--fs-34)' }}>{g.play}</h1></div>
+      <div className="levels">
         {CASE_META.map((c: any) => {
           const unlocked = c.level === 1 || progress.passed['L' + (c.level - 1)] || progress.passed[c.id];
           const best = Math.max(0, ...Object.values(progress.best[c.id] || {}).map(Number));
+          const L = LEVEL_GAME[c.level];
           return (
-            <button key={c.id} className="folder" disabled={!unlocked} onClick={() => onPick(c.id)} aria-describedby={c.id + '-d'}>
-              <span className="k">CRIMINAL · {t.level.toUpperCase()} {c.level} · {[t.beginner, t.standard, t.expert][c.level - 1].toUpperCase()}</span>
-              <h3>{c.title}</h3>
-              <p id={c.id + '-d'}>{c.oneLine}</p>
-              <p style={{ fontSize: 13 }}>{unlocked ? (c.learn?.[lang] || c.learn?.en) + (best ? ' · ' + (lang === 'hi' ? 'सर्वश्रेष्ठ ' : 'Best ') + best + '%' : '') : '🔒 ' + t.locked}</p>
-              <span className="tag tag-fic" style={{ alignSelf: 'flex-start', color: 'var(--color-muted-dark)', background: 'rgba(20,18,37,.08)' }}>FICTIONAL CASE · ~{c.estimatedMinutes} min</span>
+            <button key={c.id} className="lvl" disabled={!unlocked} data-new={justUnlocked === c.level} onClick={() => onPick(c.id)}>
+              <span className="lvl-n">{unlocked ? L.icon : '🔒'}<small>{g.level} {c.level}</small></span>
+              <span className="lvl-body">
+                <b className="lvl-name">{L.name[lang].toUpperCase()}</b>
+                <span className="lvl-case">{ICON[c.type] || '⚖️'} {c.title}</span>
+                <span className="muted">{unlocked ? L.line[lang] : g.locked}</span>
+              </span>
+              <span className="lvl-side"><Stars n={starsFor(best || null)} />{best ? <small className="muted">{g.best} {best}</small> : null}{justUnlocked === c.level && <small className="lvl-badge">{g.unlocked}</small>}</span>
             </button>
           );
         })}
-        <button className="folder" onClick={onLab} style={{ background: 'var(--color-surface-raised)', color: 'var(--color-ink)' }}>
-          <span className="k" style={{ color: 'var(--color-brass)' }}>CASE LAB · AI</span>
-          <h3>{t.labTitle}</h3>
-          <p style={{ color: 'var(--color-muted)' }}>{t.labSub}</p>
-        </button>
       </div>
-      <p className="muted" style={{ fontSize: 14 }}>{t.comingSoon}</p>
     </div>
   );
 }
 
-export function Roles({ lang, caseTitle, level, onPick, onBack, initial }: { lang: Lang; caseTitle: string; level: number; onPick: (r: string) => void; onBack: () => void; initial?: string }) {
-  const t = STR[lang]; const [sel, setSel] = useState(initial || 'def');
-  const order = [sel, ...ROLE_ORDER.filter(r => r !== sel)];
-  const move = (e: React.KeyboardEvent) => {
-    const i = ROLE_ORDER.indexOf(sel);
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setSel(ROLE_ORDER[(i + 1) % ROLE_ORDER.length]); }
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setSel(ROLE_ORDER[(i + ROLE_ORDER.length - 1) % ROLE_ORDER.length]); }
-  };
+export function Roles({ lang, onPick, onBack, initial }: { lang: Lang; onPick: (r: string) => void; onBack: () => void; initial?: string }) {
+  const [info, setInfo] = useState<string | null>(null);
   return (
-    <div className="wrap">
-      <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}><button className="icon-btn" onClick={onBack} aria-label={t.back}>←</button>
-        <div><span className="kicker">{caseTitle} · {[t.beginner, t.standard, t.expert][level - 1]}</span><h1 className="court" style={{ fontSize: 'var(--fs-34)' }}>{t.chooseSeat}</h1></div></div>
-      <div className="roles" role="radiogroup" aria-label={t.chooseSeat} onKeyDown={move}>
-        {order.map(r => { const R = ROLE_INFO[r]; const on = r === sel;
-          return (
-            <button key={r} role="radio" aria-checked={on} tabIndex={on ? 0 : -1} className="role-tile" style={{ ['--role' as any]: R.color }} onClick={() => setSel(r)}>
-              <h3>{R.name[lang]}</h3>
-              {on ? <dl><div><dt>{t.who}</dt><dd>{R.who[lang]}</dd></div><div><dt>{t.what}</dt><dd>{R.what[lang]}</dd></div><div><dt>{t.win}</dt><dd>{R.win[lang]}</dd></div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{R.skills.map(s => <span key={s} className="chip">{s}</span>)}</div></dl>
-                : <><p className="muted" style={{ fontSize: 15 }}>{R.what[lang]}</p><p style={{ fontSize: 14, marginTop: 'auto' }}>{t.learn}: {R.learn[lang]}</p></>}
+    <div className="wrap" style={{ maxWidth: 760 }}>
+      <div className="g-row"><button className="icon-btn" onClick={onBack} aria-label={STR[lang].back}>←</button><h1 className="court" style={{ fontSize: 'var(--fs-34)' }}>{G[lang].changeRole}</h1></div>
+      <div className="role-pick" role="radiogroup">
+        {Object.keys(ROLE_GAME).map(r => (
+          <div key={r} className="role-row" style={{ ['--role' as any]: ROLE_INFO[r].color }}>
+            <button role="radio" aria-checked={initial === r} className="role-big" onClick={() => onPick(r)}>
+              <span className="role-i">{ROLE_GAME[r].icon}</span><span><b>{ROLE_GAME[r].name[lang]}</b><span className="muted">{ROLE_GAME[r].line[lang]}</span></span>
             </button>
-          ); })}
+            <button className="icon-btn" aria-label={'Learn more: ' + ROLE_GAME[r].name[lang]} onClick={() => setInfo(r)}>ℹ</button>
+          </div>
+        ))}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <span className="muted">{t.othersAi}</span>
-        <button className="btn btn-primary" onClick={() => onPick(sel)}>{t.enterAs} {ROLE_INFO[sel].name[lang]} →</button>
-      </div>
+      {info && <Dialog title={ROLE_GAME[info].icon + ' ' + ROLE_INFO[info].name[lang]} onClose={() => setInfo(null)}>
+        <p>{ROLE_INFO[info].who[lang]}</p><p>{ROLE_INFO[info].what[lang]}</p><p className="muted">{ROLE_INFO[info].win[lang]}</p>
+      </Dialog>}
     </div>
   );
 }
 
-export function Brief({ lang, pub, role, onEnter, onBack }: { lang: Lang; pub: any; role: string; onEnter: () => void; onBack: () => void }) {
-  const t = STR[lang];
+/** "Before you start" — three facts and START. The full file is optional. */
+export function Brief({ lang, pub, role, onEnter, onBack, onRole }: { lang: Lang; pub: any; role: string; onEnter: () => void; onBack: () => void; onRole: () => void }) {
+  const g = G[lang]; const t = STR[lang]; const [full, setFull] = useState(false);
+  const accused = pub.names?.accused || (pub.people?.find((p: any) => /accused/i.test(p[1])) || [])[0] || '—';
   return (
-    <div className="wrap" style={{ maxWidth: 940 }}>
+    <div className="wrap" style={{ maxWidth: 640 }}>
       <button className="icon-btn" onClick={onBack} aria-label={t.back}>←</button>
-      <article className="doc">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><span className="tag tag-fic" style={{ color: 'var(--color-muted-dark)', background: 'rgba(20,18,37,.08)' }}>{t.fictional}</span>{pub.generated && <span className="tag tag-sim" style={{ color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}>CASE LAB · AI</span>}</div>
-          <span className="muted" style={{ fontSize: 13 }}>{t.caseFile} · {pub.caseNo}</span>
-          <h1>{pub.title}</h1>
-          <span className="muted">{pub.court}</span>
-          <p style={{ fontSize: 'var(--fs-18)' }}>{pub.oneLine}</p>
+      <div className="brief">
+        <span className="brief-case">{ICON[pub.type] || '⚖️'} {pub.title}</span>
+        <div className="brief-facts">
+          <div><span className="kicker">{g.who}</span><b>{accused}</b></div>
+          <div><span className="kicker">{g.what}</span><b>{pub.oneLine}</b></div>
+          <div><span className="kicker">{g.job}</span><b>{ROLE_GAME[role].icon} {ROLE_GAME[role].name[lang]} — {ROLE_GAME[role].line[lang]}</b></div>
         </div>
-        {lang === 'hi' && !pub.generated && <p className="muted" style={{ fontSize: 14 }}>{t.enNote}</p>}
-        <section className="story"><h2>{t.story}</h2>{pub.story.map((p: string, i: number) => <p key={i}>{p}</p>)}</section>
-        <details open><summary>{t.timeline}</summary><div className="tl">{pub.timeline.map(([w, x]: any, i: number) => <React.Fragment key={i}><span className="mono" style={{ fontSize: 13 }}>{w}</span><span>{x}</span></React.Fragment>)}</div></details>
-        <details><summary>{t.people}</summary><div style={{ display: 'grid', gap: 8 }}>{pub.people.map(([n, r, note]: any, i: number) => <div key={i}><b>{n}</b> — {r}{note ? <span className="muted"> · {note}</span> : null}</div>)}</div></details>
-        <details><summary>{t.exhibits}</summary><div style={{ display: 'grid', gap: 8 }}>{pub.exhibits.map((x: any) => <div key={x[0]}><span className="mono" style={{ color: 'var(--color-primary)', fontWeight: 700 }}>{x[0]}</span> <b>{x[1]}</b> — {x[2]}</div>)}</div></details>
-        <details><summary>{t.law}</summary><div style={{ display: 'grid', gap: 10, color: 'var(--color-ink)' }}>{pub.laws.map((l: any) => <LawCard key={l.id} law={l} lang={lang} t={t} />)}</div></details>
-        <div style={{ borderTop: '1px solid var(--color-parchment-line)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <h2>{t.objective} · {ROLE_INFO[role].name[lang]}</h2><p>{ROLE_INFO[role].win[lang]}</p>
+        <button className="btn btn-primary btn-lg" onClick={onEnter} autoFocus>▶ {g.start}</button>
+        <div className="g-row" style={{ justifyContent: 'center' }}>
+          <button className="link-btn" onClick={onRole}>{g.changeRole}</button>
+          <button className="link-btn" onClick={() => setFull(true)}>{g.seeCase}</button>
         </div>
-        <button className="btn btn-primary btn-lg" onClick={onEnter}>{t.enterCourt} →</button>
-      </article>
+      </div>
+      {full && <Dialog title={g.fullCase} onClose={() => setFull(false)}>
+        <span className="tag tag-fic" style={{ alignSelf: 'flex-start' }}>{t.fictional}</span>
+        {pub.story.map((p: string, i: number) => <p key={i}>{p}</p>)}
+        <h3 className="kicker">{t.timeline}</h3>{pub.timeline.map(([w, x]: any, i: number) => <p key={i}><span className="mono muted">{w}</span> · {x}</p>)}
+        <h3 className="kicker">{t.people}</h3>{pub.people.map(([n, r]: any, i: number) => <p key={i}><b>{n}</b> — {r}</p>)}
+        <h3 className="kicker">{g.clues}</h3>{pub.exhibits.map((x: any) => <p key={x[0]}><span className="mono">{x[0]}</span> <b>{x[1]}</b> — {x[2]}</p>)}
+        <h3 className="kicker">{t.law}</h3>{pub.laws.map((l: any) => <LawCard key={l.id} law={l} lang={lang} t={t} />)}
+      </Dialog>}
     </div>
+  );
+}
+
+export function Settings({ lang, prefs, upd, onClose, onLab }: { lang: Lang; prefs: any; upd: (p: any) => void; onClose: () => void; onLab: () => void }) {
+  const g = G[lang];
+  const Row = ({ label, on, k }: { label: string; on: boolean; k: string }) => (
+    <div className="set-row"><span>{label}</span><button className="switch" role="switch" aria-checked={on} aria-label={label} onClick={() => upd({ [k]: !on })}><span /></button></div>
+  );
+  return (
+    <Dialog title={'⚙ ' + g.settings} onClose={onClose}>
+      <div className="set-row"><span>{g.language}</span><div className="seg" role="group" aria-label={g.language}><button aria-pressed={lang === 'en'} onClick={() => upd({ lang: 'en' })}>English</button><button aria-pressed={lang === 'hi'} lang="hi" onClick={() => upd({ lang: 'hi' })}>हिंदी</button></div></div>
+      <Row label={g.sound} on={!!prefs.sound} k="sound" />
+      <Row label={g.reducedAudio} on={!!prefs.reducedAudio} k="reducedAudio" />
+      <Row label={g.voice} on={!!prefs.voice} k="voice" />
+      <hr style={{ border: 0, borderTop: '1px solid var(--color-line)', width: '100%' }} />
+      <button className="btn" onClick={onLab}>🧪 {g.practice}</button>
+    </Dialog>
   );
 }

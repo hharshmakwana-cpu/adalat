@@ -71,6 +71,11 @@ alter table public.rate_limits enable row level security;
 alter table public.security_log enable row level security;
 revoke all on public.rooms, public.room_players, public.room_seat_modes, public.room_actions, public.rate_limits, public.security_log from anon, authenticated;
 
+-- Newer Supabase projects don't auto-grant SQL-created tables to API roles. The server (service_role) needs them.
+grant usage on schema public to service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+
 -- Atomic fixed-window rate limiter. Returns true if allowed.
 create or replace function public.hit_rate(p_key text, p_window_s int, p_max int)
 returns boolean language plpgsql security definer set search_path = public as $$
@@ -83,7 +88,9 @@ begin
   returning * into r;
   return r.hits <= p_max;
 end $$;
-revoke all on function public.hit_rate(text,int,int) from anon, authenticated;
+revoke all on function public.hit_rate(text,int,int) from public, anon, authenticated;
+grant execute on function public.hit_rate(text,int,int) to service_role;
+notify pgrst, 'reload schema';
 
 -- Membership check used by Realtime authorisation (security definer so it can read room_players).
 create or replace function public.can_read_topic(p_topic text)

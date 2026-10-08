@@ -5,8 +5,8 @@ import { LAW, lawIdFor } from './legal.js';
 export const ROLES = ['judge', 'pros', 'def', 'accused', 'witness'];
 export const LEVELS = {
   1: { name: 'beginner', timer: 0, feedback: true, suggest: true, aiBest: 0.55, adjournLimit: 2 },
-  2: { name: 'standard', timer: 90, feedback: true, suggest: true, aiBest: 0.7, adjournLimit: 2 },
-  3: { name: 'expert', timer: 60, feedback: false, suggest: false, aiBest: 0.85, adjournLimit: 1 }
+  2: { name: 'standard', timer: 45, feedback: true, suggest: true, aiBest: 0.7, adjournLimit: 2 },
+  3: { name: 'expert', timer: 30, feedback: false, suggest: false, aiBest: 0.85, adjournLimit: 1 }
 };
 export const DIM_OF = { law: 'legal', evi: 'evidence', wit: 'questions', obj: 'procedure', rsn: 'reasoning', cred: 'credibility' };
 export const DIMENSIONS = ['legal', 'evidence', 'procedure', 'questions', 'reasoning', 'credibility', 'time'];

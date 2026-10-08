@@ -6,6 +6,7 @@ import { RoomOps } from '../../shared/schemas.js';
 import { genRoomCode, CODE_RE } from '../../shared/text.js';
 import { getBuiltin } from '../../shared/cases.js';
 import { createGame, runAI, project, publicCase, ROLES, summary, awards } from '../../shared/engine.js';
+import { sliceLog } from '../../shared/sync.js';
 
 const MAX_SEATS = 5, MAX_SPECTATORS = 20, HOST_STALE_MS = 20000, ONLINE_MS = 35000;
 
@@ -24,18 +25,22 @@ async function me(room, user) {
 const touch = (pid) => db().from('room_players').update({ last_seen: new Date().toISOString() }).eq('id', pid);
 const bump = (room, extra = {}) => db().from('rooms').update({ updated_at: new Date().toISOString(), expires_at: new Date(Date.now() + (room.status === 'in_game' ? 2 * 3600e3 : 30 * 60e3)).toISOString(), ...extra }).eq('id', room.id);
 
-export async function view(room, pl, myPlayer) {
-  const modes = await seatModes(room.id); const C = getBuiltin(room.case_id); const now = Date.now();
+const PUB = new Map(); // static public case objects are immutable — cache per instance
+const pubCase = (id) => { if (!PUB.has(id)) { const C = getBuiltin(id); PUB.set(id, C ? publicCase(C) : null); } return PUB.get(id); };
+
+/** Full snapshot (lobby / reconnect). Pass lite:true during play to skip seat modes and the static case file. */
+export async function view(room, pl, myPlayer, { lite = false, logFrom } = {}) {
+  const modes = lite ? null : await seatModes(room.id); const C = getBuiltin(room.case_id); const now = Date.now();
   const hostP = pl.find(p => p.user_id === room.host_user);
   const out = {
     room: { id: room.id, code: room.code, status: room.status, version: room.version, level: room.level, caseId: room.case_id, expiresAt: room.expires_at, allowSpectators: room.allow_spectators, hostPlayerId: hostP ? hostP.id : null, hostOnline: !!hostP && now - new Date(hostP.last_seen).getTime() < HOST_STALE_MS },
     players: pl.map(p => ({ id: p.id, name: p.display_name, role: p.role, ready: p.ready, spectator: p.is_spectator, online: now - new Date(p.last_seen).getTime() < ONLINE_MS, isHost: p.user_id === room.host_user })),
-    seatModes: Object.fromEntries(ROLES.map(r => [r, modes[r] || 'ai'])),
+    seatModes: modes ? Object.fromEntries(ROLES.map(r => [r, modes[r] || 'ai'])) : undefined,
     me: { playerId: myPlayer.id, role: myPlayer.role, spectator: myPlayer.is_spectator, isHost: myPlayer.user_id === room.host_user },
-    case: C ? publicCase(C) : null, game: null, results: null
+    case: lite ? undefined : pubCase(room.case_id), game: null, results: null
   };
   if (room.state && C) {
-    out.game = project(room.state, C, { role: myPlayer.is_spectator ? null : myPlayer.role, spectator: myPlayer.is_spectator });
+    out.game = sliceLog(project(room.state, C, { role: myPlayer.is_spectator ? null : myPlayer.role, spectator: myPlayer.is_spectator }), logFrom);
     if (room.state.status === 'done') {
       const seated = pl.filter(p => p.role && !p.is_spectator).map(p => ({ id: p.id, name: p.display_name, role: p.role }));
       out.results = { table: seated.map(p => ({ ...p, ...summary(room.state, p.role) })), awards: awards(room.state, seated) };
@@ -51,13 +56,13 @@ export default route(async (req, { requestId }) => {
   if (op === 'create') {
     await rateLimit('create:' + user.id, 3600, 5); await rateLimit('createip:' + ip, 3600, 20);
     if (!getBuiltin(body.caseId)) fail('INVALID_INPUT', 400);
-    let room = null;
+    let room = null; let lastErr = null;
     for (let i = 0; i < 5 && !room; i++) {
       const code = genRoomCode(n => crypto.randomBytes(n));
       const { data, error } = await db().from('rooms').insert({ code, host_user: user.id, case_id: body.caseId, level: body.level, allow_spectators: body.allowSpectators }).select('*').single();
-      if (!error) room = data;
+      if (!error) room = data; else { lastErr = error; if (error.code !== '23505') break; }
     }
-    if (!room) fail('UNAVAILABLE', 503);
+    if (!room) { console.log(JSON.stringify({ room_insert_error: lastErr && lastErr.code, msg: String(lastErr && lastErr.message).slice(0, 160) })); fail('DB_ROOM_INSERT', 503, { pg: lastErr && lastErr.code }); }
     await db().from('room_seat_modes').insert(ROLES.map(r => ({ room_id: room.id, role: r, mode: r === body.role ? 'human' : 'ai' })));
     const { data: p } = await db().from('room_players').insert({ room_id: room.id, user_id: user.id, display_name: body.displayName, role: body.role, ready: true }).select('*').single();
     logSec('room_create', { requestId, userId: user.id, roomId: room.id });
@@ -87,13 +92,22 @@ export default route(async (req, { requestId }) => {
   }
 
   // All remaining ops need the room token as well as the user token.
-  const room = await loadRoom(body.roomId);
-  verifyRoomToken(req.headers['x-room-token'], { roomId: room.id, userId: user.id });
-  let mine = await me(room, user); await touch(mine.id);
-  await rateLimit('room:' + mine.id, 60, 120);
+  // Fast path: room + my player in parallel, token checked before any write.
+  verifyRoomToken(req.headers['x-room-token'], { roomId: body.roomId, userId: user.id });
+  const [room, mine0] = await Promise.all([loadRoom(body.roomId), db().from('room_players').select('*').eq('room_id', body.roomId).eq('user_id', user.id).maybeSingle().then(r => r.data)]);
+  if (!mine0) fail('NOT_IN_ROOM', 403);
+  let mine = mine0;
   const isHost = room.host_user === user.id;
 
-  if (op === 'resume') { const pl = await players(room.id); return view(room, pl, mine); }
+  // Heartbeat: presence only — no game state is read or returned.
+  if (op === 'heartbeat') { await touch(mine.id); return { ok: true, version: room.version, status: room.status }; }
+
+  const [, , pl0] = await Promise.all([touch(mine.id), rateLimit('room:' + mine.id, 60, 120), players(room.id)]);
+
+  // Full snapshot for first load / reconnect / lobby.
+  if (op === 'resume') return view(room, pl0, mine);
+  // Game-only state for in-play syncs: no seat modes, no case file, only new log entries.
+  if (op === 'state') return view(room, pl0, mine, { lite: true, logFrom: body.logFrom });
 
   if (op === 'role') {
     if (room.status !== 'lobby' || mine.is_spectator) fail('INVALID_ACTION', 409);

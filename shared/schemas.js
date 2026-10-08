@@ -11,7 +11,8 @@ export const Move = z.discriminatedUnion('type', [
   z.object({ type: z.literal('TIMEOUT') })
 ]);
 export const Envelope = z.object({
-  roomId: z.string().uuid(), actionId: z.string().uuid(), turnId: z.number().int().min(0), baseVersion: z.number().int().min(0), move: Move
+  roomId: z.string().uuid(), actionId: z.string().uuid(), turnId: z.number().int().min(0), baseVersion: z.number().int().min(0), move: Move,
+  logFrom: z.number().int().min(0).max(10000).optional()
 }).strict();
 
 export const DisplayName = Text(2, 24).refine(s => !/[<>{}]/.test(s), 'NAME_CHARS');
@@ -23,6 +24,8 @@ export const RoomOps = {
   seat: z.object({ roomId: z.string().uuid(), role: Role, mode: z.enum(['human', 'ai']) }).strict(),
   start: z.object({ roomId: z.string().uuid() }).strict(),
   resume: z.object({ roomId: z.string().uuid(), lastVersion: z.number().int().min(0).optional() }).strict(),
+  state: z.object({ roomId: z.string().uuid(), logFrom: z.number().int().min(0).max(10000).optional() }).strict(),
+  heartbeat: z.object({ roomId: z.string().uuid() }).strict(),
   leave: z.object({ roomId: z.string().uuid() }).strict(),
   'transfer-host': z.object({ roomId: z.string().uuid() }).strict(),
   kick: z.object({ roomId: z.string().uuid(), playerId: z.string().uuid() }).strict()

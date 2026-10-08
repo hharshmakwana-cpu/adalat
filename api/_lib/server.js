@@ -66,7 +66,7 @@ export async function rateLimit(key, windowS, max) {
     if (++e.n > max) fail('RATE_LIMITED', 429); return;
   }
   const { data, error } = await db().rpc('hit_rate', { p_key: key, p_window_s: windowS, p_max: max });
-  if (error) fail('UNAVAILABLE', 503);
+  if (error) { console.log(JSON.stringify({ limiter_error: error.code, msg: String(error.message).slice(0, 160) })); fail('DB_RATE_FN', 503, { pg: error.code }); }
   if (!data) { logSec('rate_limited', { code: key.split(':')[0] }); fail('RATE_LIMITED', 429); }
 }
 
@@ -87,17 +87,18 @@ export function verifyRoomToken(tok, { roomId, userId }) {
   const [body, sig] = String(tok || '').split('.'); if (!body || !sig) fail('ROOM_TOKEN_INVALID', 401);
   const want = crypto.createHmac('sha256', secret).update(body).digest(); const got = Buffer.from(sig, 'base64url');
   if (got.length !== want.length || !crypto.timingSafeEqual(got, want)) fail('ROOM_TOKEN_INVALID', 401);
-  const p = JSON.parse(Buffer.from(body, 'base64url').toString());
-  if (p.exp < Date.now() / 1000 || p.rid !== roomId || p.uid !== userId) fail('ROOM_TOKEN_INVALID', 401);
+  let p; try { p = JSON.parse(Buffer.from(body, 'base64url').toString()); } catch { fail('ROOM_TOKEN_INVALID', 401); }
+  if (!p || typeof p !== 'object' || p.exp < Date.now() / 1000 || p.rid !== roomId || p.uid !== userId) fail('ROOM_TOKEN_INVALID', 401);
   return p;
 }
 
 /** Server-only fan-out on a PRIVATE channel. Payload is just a version ping — clients pull their own projection. */
 export async function ping(roomId, payload) {
+  const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 1200); // never hold a player's response for long
   try {
-    await fetch(process.env.SUPABASE_URL + '/realtime/v1/api/broadcast', {
+    await fetch(process.env.SUPABASE_URL + '/realtime/v1/api/broadcast', { signal: ac.signal,
       method: 'POST', headers: { 'content-type': 'application/json', apikey: process.env.SUPABASE_SERVICE_ROLE_KEY, authorization: 'Bearer ' + process.env.SUPABASE_SERVICE_ROLE_KEY },
       body: JSON.stringify({ messages: [{ topic: 'room:' + roomId, event: 'sync', payload, private: true }] })
     });
-  } catch { /* clients also poll on reconnect */ }
+  } catch { /* clients also refresh on reconnect */ } finally { clearTimeout(t); }
 }

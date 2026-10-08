@@ -32,10 +32,12 @@ function Entry({ lang, name, setName, onBack, onIn, notice }: any) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
         <section style={{ background: 'var(--color-surface)', borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }} aria-labelledby="h-c">
           <h2 id="h-c" className="court" style={{ fontSize: 'var(--fs-26)' }}>{t.create}</h2>
+          <button className="btn btn-primary btn-lg" disabled={busy} onClick={create}>{busy ? '…' : t.createBtn}</button>
+          <details className="more" style={{ padding: 0, background: 'none' }}><summary>{lang === 'hi' ? 'रूम विकल्प' : 'Room options'}</summary>
           <div className="form-row"><label htmlFor="cs">Case</label><select id="cs" className="input" value={caseId} onChange={e => { setCaseId(e.target.value); setLevel(Number(e.target.value.slice(1))); }}>{CASE_META.map((c: any) => <option key={c.id} value={c.id}>{c.title}</option>)}</select></div>
           <div className="seg" role="group" aria-label={t.level}>{[1, 2, 3].map(n => <button key={n} aria-pressed={level === n} onClick={() => setLevel(n)}>{[t.beginner, t.standard, t.expert][n - 1]}</button>)}</div>
           <div className="form-row"><label htmlFor="rl">{t.role}</label><select id="rl" className="input" value={role} onChange={e => setRole(e.target.value)}>{ROLE_ORDER.map(r => <option key={r} value={r}>{ROLE_INFO[r].name[lang]}</option>)}</select></div>
-          <button className="btn btn-primary" disabled={busy} onClick={create}>{t.createBtn}</button>
+          </details>
         </section>
         <section style={{ background: 'var(--color-surface)', borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }} aria-labelledby="h-j">
           <h2 id="h-j" className="court" style={{ fontSize: 'var(--fs-26)' }}>{t.join}</h2>
@@ -52,7 +54,7 @@ function Entry({ lang, name, setName, onBack, onIn, notice }: any) {
 }
 
 function Room({ lang, voice, session, onLeave }: any) {
-  const t = STR[lang]; const { data, conn, error, op, act } = useRoom(session, (code: string) => onLeave(code));
+  const t = STR[lang]; const { data, conn, error, op, act, sending } = useRoom(session, (code: string) => onLeave(code));
   const [copied, setCopied] = useState<'' | 'ok' | 'fail'>(''); const [roleErr, setRoleErr] = useState<any>(null); const [showResult, setShowResult] = useState(false);
   useEffect(() => { if (data?.game?.status !== 'done') setShowResult(false); }, [data?.game?.status]);
   if (!data) return <div className="wrap"><p className="muted" role="status">{conn === 'reconnecting' || conn === 'lost' ? errText('NET', lang) : t.resuming}</p></div>;
@@ -63,7 +65,7 @@ function Room({ lang, voice, session, onLeave }: any) {
   if (data.game && (data.game.status === 'court' || !showResult)) {
     return <>
       {hostGone && <HostGone lang={lang} onTake={() => op('transfer-host').catch(() => {})} onLeave={leave} />}
-      <Court pub={data.case} view={data.game} act={act} myRole={me.spectator ? null : me.role} lang={lang} voice={voice} conn={conn} error={error} spectator={me.spectator || !me.role} names={names} onFinished={() => setShowResult(true)} />
+      <Court sending={sending} onExit={leave} pub={data.case} view={data.game} act={act} myRole={me.spectator ? null : me.role} lang={lang} voice={voice} conn={conn} error={error} spectator={me.spectator || !me.role} names={names} onFinished={() => setShowResult(true)} />
     </>;
   }
   if (data.game && showResult) {
