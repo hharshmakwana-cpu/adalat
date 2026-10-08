@@ -4,7 +4,7 @@ The game is a single web page (`index.html`). The AI features (live cases, AI la
 
 ## Easiest route: Vercel (≈15 minutes, no coding)
 
-1. **Get an AI key** — sign up at console.anthropic.com → *API Keys* → create a key. Add a little billing credit.
+1. **Get a FREE AI key** — go to **aistudio.google.com** → sign in with Google → **Get API key → Create API key**. No card needed. (Paid alternative: an Anthropic key from console.anthropic.com.)
 2. **Make this folder** on your computer:
    ```
    adalat/
@@ -13,8 +13,8 @@ The game is a single web page (`index.html`). The AI features (live cases, AI la
    ```
 3. **Sign up at vercel.com** (log in with Google or GitHub) → *Add New → Project* → drag the `adalat` folder in.
 4. Before you click Deploy, open **Environment Variables** and add:
-   - `ANTHROPIC_API_KEY` = your key
-   - (optional) `ANTHROPIC_MODEL` = the model name you want (default `claude-sonnet-4-5`)
+   - `GEMINI_API_KEY` = your free Google key  (or `ANTHROPIC_API_KEY` if you chose Anthropic)
+   - (optional) `GEMINI_MODEL` = model name (default `gemini-2.5-flash`)
 5. Click **Deploy**. You get a link like `adalat.vercel.app`. Add your own domain later under *Settings → Domains*.
 
 The game finds the AI by itself at `/api/adalat-ai` — no settings to change.
@@ -44,4 +44,4 @@ Read-aloud and "Speak" use the browser's built-in speech features (best in Chrom
 No database tables are needed — the game uses Supabase Realtime channels only.
 
 ## Costs
-Vercel's free plan is enough to start. AI usage is pay-per-use; one full AI Live case is roughly 30–40 short AI requests.
+Vercel's free plan is enough to start. The Google Gemini free tier has daily limits (roughly a few hundred requests a day) — one full AI Live case uses about 30–40 requests, so expect around 5–10 AI cases per day for free. The 3 built-in levels and multiplayer use no AI quota.
