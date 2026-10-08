@@ -24,21 +24,20 @@ export default function Court({ pub, view, act, myRole, lang, voice, onFinished,
   const [fx, setFx] = useState<any>(null); const [sheet, setSheet] = useState<null | 'clues' | 'learn' | 'record' | 'why' | { clue: any }>(null);
   const [aiPill, setAiPill] = useState(''); const [flash, setFlash] = useState<string | null>(null);
   const [left, setLeft] = useState<number | null>(null); const [mic, setMic] = useState<null | (() => void)>(null);
-  const lastLen = useRef(view.log.length); const seenMoments = useRef(new Set<string>()); const timedOut = useRef(-1); const spokeTurn = useRef(-1);
-
-  const turn = view.turn; const playing = !!beat; const mine = !!turn && turn.mine && !spectator && view.status === 'court' && !playing;
-  const busy = !!sending;
+  const lastLen = useRef(0); const seenMoments = useRef(new Set<string>()); const timedOut = useRef(-1); const spokeTurn = useRef(-1);
 
   // New log entries are played back as "story beats" so the player can follow what others did.
   // Beats are presentation only: the authoritative state is already updated; the player can tap Next / Skip anytime.
   const [beats, setBeats] = useState<any[]>([]); const [bi, setBi] = useState(0);
   const beat = bi < beats.length ? beats[bi] : null;
+  const turn = view.turn; const playing = !!beat; const mine = !!turn && turn.mine && !spectator && view.status === 'court' && !playing;
+  const busy = !!sending;
   const fresh = view.log.length - lastLen.current;
   useEffect(() => {
     const batch = view.log.slice(lastLen.current); const first = lastLen.current === 0; lastLen.current = view.log.length;
     if (!batch.length) return;
     const show = batch.filter((e: any) => (e.kind === 'talk' || e.kind === 'order' || e.kind === 'exhibit' || (e.kind === 'clerk' && /witness box|adjourned/i.test(e.text))) && !(e.role === myRole && e.kind !== 'clerk'));
-    if (pace > 0 && show.length && !(first && show.length > 6)) { setBeats(show); setBi(0); }
+    if (pace > 0 && show.length && !(first && show.length > 12)) { setBeats(show); setBi(0); }
     const last = batch[batch.length - 1]; say((last.who ? last.who + ': ' : '') + last.text);
   }, [view.log.length]);
   useEffect(() => {
