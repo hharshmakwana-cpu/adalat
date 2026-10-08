@@ -22,7 +22,7 @@ function Entry({ lang, name, setName, onBack, onIn, notice }: any) {
   const [caseId, setCaseId] = useState('L1'); const [level, setLevel] = useState(1); const [role, setRole] = useState('def');
   const [err, setErr] = useState(notice || ''); const [busy, setBusy] = useState(false); const [taken, setTaken] = useState<any>(null);
   const nm = validName(name);
-  const run = async (fn: () => Promise<any>) => { if (!nm.ok) { setErr(lang === 'hi' ? 'नाम 2–24 अक्षरों का हो।' : 'Name must be 2–24 characters.'); return; } setBusy(true); setErr(''); try { const v = await fn(); onIn({ roomId: v.room.id, token: v.token }); } catch (e: any) { if (e.code === 'ROLE_TAKEN') setTaken(e.detail); else setErr(errText(e.code, lang)); } finally { setBusy(false); } };
+  const run = async (fn: () => Promise<any>) => { if (!nm.ok) { setErr(lang === 'hi' ? 'नाम 2–24 अक्षरों का हो।' : 'Name must be 2–24 characters.'); return; } setBusy(true); setErr(''); try { const v = await fn(); onIn({ roomId: v.room.id, token: v.token }); } catch (e: any) { if (e.code === 'ROLE_TAKEN') setTaken(e.detail); else setErr(errText(e.code, lang) + ' (' + (e.code || 'UNKNOWN') + ')'); } finally { setBusy(false); } };
   const create = () => run(() => api('/api/room/create', { displayName: nm.value, caseId, level, role, allowSpectators: true }));
   const join = (wantRole?: string | null, spectate?: boolean) => run(() => api('/api/room/join', { code, displayName: nm.value, wantRole: wantRole ?? null, spectate: !!spectate }));
   return (
